@@ -5,21 +5,29 @@ from scipy import integrate
 import time
 
 
-Nsamples = 2000
+Nsamples = 200000
 resolution = 100
 
-def density(x,scale_radius,  gamma): #NFW density profile
+def density(x,y,scale_radius,  gamma): #NFW density profile
 	solar_radius = 8.25
-	R = np.sqrt(1 -2.*np.cos(2.0*np.pi/180.)*x + x*x)#R / solar radius
+	R = np.sqrt(1 -2.*y*x + x*x)#R / solar radius
 	return pow(R,-gamma)*pow((1 + R*solar_radius/scale_radius)/(1+solar_radius/scale_radius),gamma-3)
 
-def J_factor(scale_radius,local_density,gamma):
-	#integrating density^2 from x=0 to inf; x is line of sight distance
-	integrand = lambda x: density(x,scale_radius,gamma)**2
-	ans, err = integrate.quad(integrand, 0,np.inf)
+ddef J_factor(scale_radius,local_density,gamma):
+	#integrating density^2 from x=0 to inf; x is line of sight distance/solarradius
+	#theta = np.zeros((7,7))
+	temp = np.zeros((7,7))
+	for i in range(7):
+		for j in range(7):
+			y = np.cos(.5*(1+j)*np.pi/180.)*np.cos(.5*(1+i)*np.pi/180.)
+			integrand = lambda x: density(x,y,scale_radius,gamma)**2
+			ans, err = integrate.quad(integrand, 0,np.inf)
+			temp[i,j] = ans
+	J = temp.mean()	
 	kpctocm = 3.08568e21
 	deltaomega = (7.*np.pi/180.)**2
-	return deltaomega*ans*8.25*kpctocm*local_density*local_density
+	return  deltaomega*J*8.25*kpctocm*local_density*local_density
+	
 
 
 coeff = np.array([37.5153,-1.5093,1.63e-2,3.66e-4,-2.89237e-5,5.32e-7])
