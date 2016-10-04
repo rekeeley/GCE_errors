@@ -22,3 +22,6 @@ def J_factor(scale_radius,local_density,gamma):
     kpctocm = 3.08568e21
     deltaomega = (7.*np.pi/180.)**2
     return  deltaomega*J*8.25*kpctocm*local_density*local_density
+
+def mu(bckgrnd,num_spec,J,log_sigma,mass):
+    return bckgrnd + num_spec*J*pow(10,log_sigma)

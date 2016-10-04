@@ -12,3 +12,6 @@ print GC_dens
 GC_log_like = GCE_calcs.analysis.poisson_log_like(100.,95.)
 
 print GC_log_like
+
+
+print 'something'
