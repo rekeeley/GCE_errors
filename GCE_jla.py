@@ -15,3 +15,11 @@ print GC_log_like
 
 
 print 'something'
+
+k = np.array([2105.,1904.,1750.,1590.])
+mu = np.array([2100.,1911.,1743.,1582.])
+
+array_log_like = GCE_calcs.analysis.poisson_log_like(k,mu)
+
+print array_log_like
+

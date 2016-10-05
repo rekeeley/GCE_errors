@@ -24,4 +24,15 @@ def J_factor(scale_radius,local_density,gamma):
     return  deltaomega*J*8.25*kpctocm*local_density*local_density
 
 def mu(bckgrnd,num_spec,J,log_sigma,mass):
-    return bckgrnd + num_spec*J*pow(10,log_sigma)
+    return bckgrnd + num_spec*J*pow(10,log_sigma)/(8*np.pi*mass**2)
+
+def conc():
+    coeff = np.array([37.5153,-1.5093,1.63e-2,3.66e-4,-2.89237e-5,5.32e-7])
+    h = 0.67
+    Mmw = 1.5e12
+    rvir = 200.
+    conc = 0.
+    for i in range(6):
+        conc += coeff[i]*np.log(h*Mmw)**i
+    return conc
+
