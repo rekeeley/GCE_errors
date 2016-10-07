@@ -23,8 +23,22 @@ def J_factor(scale_radius,local_density,gamma):
     deltaomega = (7.*np.pi/180.)**2
     return  deltaomega*J*8.25*kpctocm*local_density*local_density
 
-def mu(bckgrnd,num_spec,J,log_sigma,mass):
-    return bckgrnd + num_spec*J*pow(10,log_sigma)/(8*np.pi*mass**2)
+def get_mu(bckgrnd,exposure,num_spec,J,log_sigma,mass):
+    #should return an array of shape (n_cross,n_J,n_mass,n_spec)
+    n_cross = len(log_sigma)
+    n_mass = len(mass)
+    n_J = len(J)
+    exposure = np.tile(exposure,(n_mass,1))
+    bckgrnd = np.tile(bckgrnd,(n_cross,n_J,n_mass,1))
+    mass = np.tile(mass,(num_spec.shape[1],1)).T
+    sigma = 10.**log_sigma
+    spec_over_mass = exposure*num_spec /mass**2
+    #magic = [num_spec,J,sigma,inv_mass_sqrd]
+    #I've no idea why the following line works, but it apparently calculates the outer product of the multiple vectors in 'magic'
+    #residual = reduce(np.multiply, np.ix_(*magic))/(8*np.pi)
+    #found a more reasonable way to do the above
+    residual = np.einsum('i,j,kl->ijkl',sigma,J,spec_over_mass)/(8*np.pi)
+    return bckgrnd + residual
 
 def conc():
     coeff = np.array([37.5153,-1.5093,1.63e-2,3.66e-4,-2.89237e-5,5.32e-7])
@@ -35,4 +49,14 @@ def conc():
     for i in range(6):
         conc += coeff[i]*np.log(h*Mmw)**i
     return conc
+
+def get_J_log_prior_fast(J):
+    sigma_rho = 0.08
+    mu_rho = 0.28
+    norm = -0.5*np.log(2*np.pi*sigma_rho**2)
+    chi_sqrd = -0.5*( np.sqrt(J/2.e23) - mu_rho)**2/(sigma_rho)**2
+    return norm + chi_sqrd
+
+
+
 
