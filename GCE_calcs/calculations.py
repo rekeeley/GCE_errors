@@ -24,6 +24,7 @@ def J_factor(scale_radius,local_density,gamma):
     return  deltaomega*J*8.25*kpctocm*local_density*local_density
 
 def get_mu(bckgrnd,exposure,num_spec,J,log_sigma,mass):
+    print bckgrnd
     #should return an array of shape (n_cross,n_J,n_mass,n_spec)
     n_cross = len(log_sigma)
     n_mass = len(mass)
@@ -38,6 +39,7 @@ def get_mu(bckgrnd,exposure,num_spec,J,log_sigma,mass):
     #residual = reduce(np.multiply, np.ix_(*magic))/(8*np.pi)
     #found a more reasonable way to do the above
     residual = np.einsum('i,j,kl->ijkl',sigma,J,spec_over_mass)/(8*np.pi)
+    print residual[0,0,25,:]
     return bckgrnd + residual
 
 def conc():
@@ -50,12 +52,6 @@ def conc():
         conc += coeff[i]*np.log(h*Mmw)**i
     return conc
 
-def get_J_log_prior_fast(J):
-    sigma_rho = 0.08
-    mu_rho = 0.28
-    norm = -0.5*np.log(2*np.pi*sigma_rho**2)
-    chi_sqrd = -0.5*( np.sqrt(J/2.e23) - mu_rho)**2/(sigma_rho)**2
-    return norm + chi_sqrd
 
 
 
