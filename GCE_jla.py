@@ -49,68 +49,81 @@ exposure = raw[trunc:dataset,6]
 
 binned_spectra = np.loadtxt('spectra/binned/binned_spectra_'+output_file+'_'+str(dataset)+'_'+str(trunc)+'.dat')
 
+n_J=400
 #J = np.array([1.e21,1.e22,1.e23])
-#J = np.logspace(20.,24.,num=40)
-J = np.array([1.5e22])
+J = np.logspace(20.,24.,num=n_J)
+#J = np.array([1.5e22])
 
-log_sigma = np.linspace(-27.,-23.,num=20)
+n_mass = len(mass_table)
+
+n_sigma = 40
+sigma = np.logspace(-27.,-24.,num=n_sigma)
 #log_sigma = np.array([np.log10(3.e-26)])
 #log_sigma = np.array([-23.,-24.,-25.,-26.,-27.])
 
 #mass = np.array([10,20,30,40,50,60,70])
 
-mu = GCE_calcs.calculations.get_mu(background,exposure, binned_spectra, J, log_sigma, mass_table)
+mu = GCE_calcs.calculations.get_mu(background,exposure, binned_spectra, J, sigma, mass_table)
 
 
-plt.plot(bin_center,k)
-plt.plot(bin_center,mu[10,0,35,:])
+plt.plot(bin_center,k,label = 'data')
+plt.plot(bin_center,background,label = 'background')
+for i in range(5):
+    plt.plot(bin_center,mu[n_sigma/2,n_J/2,5+10*i,:],label = str(mass_table[5+10*i]))
+plt.legend(loc='best')
 plt.savefig('spectra_test.png')
+plt.clf()
 
-print k
-print k - background
+k = np.tile(k,(n_sigma,n_J,n_mass,1))
 
-array_log_like = GCE_calcs.analysis.poisson_log_like(k,mu)
+log_like = GCE_calcs.analysis.poisson_log_like(k,mu)
 
-print array_log_like.shape
+print log_like.shape
 
-gauss_log_like = GCE_calcs.analysis.gauss_log_like_unnorm(k,mu)
+log_like2 = np.sum(log_like,axis=3)
 
-print gauss_log_like.shape
-
-n_cross, n_J, n_mass, n_spec = array_log_like.shape
+print log_like2.shape
 
 J_prior = GCE_calcs.analysis.get_J_prior_MC(J)
 
-J_prior = np.tile(J_prior,(n_cross, n_mass, n_spec, 1))
+norm_test = np.trapz(J_prior,x=J)
 
-J_prior = J_prior.reshape(array_log_like.shape)
+print norm_test
 
-print J_prior.shape
+J_prior = np.tile(J_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass))
 
-post = gauss_log_like + np.log(J_prior)
+norm_test2 = np.trapz(J_prior,x=J,axis=1)
+print norm_test2.shape
+print norm_test2
 
-print post.shape
+J_prior[J_prior==0]=1.e-300
 
-post = np.sum(post,axis=3)
+post_nlp = log_like2 + np.log(J_prior)
 
-print post.shape
+post_test = np.exp(log_like2)*J_prior
 
-post_pdf = np.exp(post)
+post_test2 = np.trapz(post_test,x=J,axis=1)
 
-#J = np.tile()
+post_test3 = np.log(post_test2)
 
-post_pdf = np.trapz(post_pdf,x = J ,axis=1)
+post_test4 = post_test3 - post_test3.max()
 
-print post_pdf.shape
 
-#print post_pdf
 
-post_log_pdf = np.log(post_pdf)
-post_log_pdf = post_log_pdf - post_log_pdf.max()
+post_nlp_min = np.amax(post_nlp,axis=1)
 
-#print post_log_pdf
 
-levels = [0,1.2,3.3,6.35,15]
-plt.contour(mass_table,log_sigma,-post_log_pdf,levels)
+post_nlp_min2 = post_nlp_min - post_nlp_min.max()
+
+
+
+levels = [0,1,3,6,12]
+#plt.contour(mass_table,log_sigma,-post_log_pdf[:,2,:],levels)
+#plt.contour(mass_table,np.log10(sigma),-post_nlp_min2,levels)
+plt.contour(mass_table,np.log10(sigma),-post_test4,levels)
 plt.savefig('array_test.png')
+
+
+
+
 

@@ -23,23 +23,22 @@ def J_factor(scale_radius,local_density,gamma):
     deltaomega = (7.*np.pi/180.)**2
     return  deltaomega*J*8.25*kpctocm*local_density*local_density
 
-def get_mu(bckgrnd,exposure,num_spec,J,log_sigma,mass):
-    print bckgrnd
+def get_mu(bckgrnd,exposure,num_spec,J,sigma,mass):
+    #print bckgrnd
     #should return an array of shape (n_cross,n_J,n_mass,n_spec)
-    n_cross = len(log_sigma)
+    n_cross = len(sigma)
     n_mass = len(mass)
     n_J = len(J)
     exposure = np.tile(exposure,(n_mass,1))
     bckgrnd = np.tile(bckgrnd,(n_cross,n_J,n_mass,1))
     mass = np.tile(mass,(num_spec.shape[1],1)).T
-    sigma = 10.**log_sigma
     spec_over_mass = exposure*num_spec /mass**2
     #magic = [num_spec,J,sigma,inv_mass_sqrd]
     #I've no idea why the following line works, but it apparently calculates the outer product of the multiple vectors in 'magic'
     #residual = reduce(np.multiply, np.ix_(*magic))/(8*np.pi)
     #found a more reasonable way to do the above
-    residual = np.einsum('i,j,kl->ijkl',sigma,J,spec_over_mass)/(8*np.pi)
-    print residual[0,0,25,:]
+    residual = np.einsum('i,j,kl->ijkl',sigma,J,spec_over_mass)/(8.*np.pi)
+    #print residual[0,0,25,:]
     return bckgrnd + residual
 
 def conc():
