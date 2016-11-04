@@ -1,0 +1,84 @@
+Supplementary material for Physical Review Letters, 115, 231301 (arXiv:1503.02641)
+Contact: Matthew Wood <mdwood@slac.stanford.edu>
+
+This distribution contains machine-readable text files corresponding
+to the analysis and results of PRL, 115, 231301. These files can be
+divided into three categories:
+
+===============================
+=== Dark Matter Constraints ===
+===============================
+Number of files: 6
+File naming: limits_<channel>.txt
+Description:
+    Upper limits on the DM annihilation cross section versus mass for
+    individual targets and the combined analysis of 15 dwarf galaxies.
+    Note that individual targets limits are profiled with respect to
+    the J-Factor uncertainty of the respective dwarf galaxy in the
+    same way as done in the combined analysis.
+    
+Structure:
+    Column [0]:    Dark matter particle mass (GeV)
+    Column [1-25]: Constraints on <sigmav> derived
+        from each dwarf galaxy with a kinematically
+        determined J-factor.
+    Column [26]:   Constraints on <sigmav> derived
+        from a combined analysis of 15 dwarf galaxies.
+
+================================
+===  Bin-By-Bin Flux Limits  ===
+================================
+Number of files: 1
+File naming: bin_by_bin_limits_<type>.txt
+Description:
+    Bin-by-bin upper limits for each dwarf galaxy on the integral
+    (type=eflux) and differential (type=e2dfde) flux.  Both
+    calculations model the flux distribution within an energy bin as a
+    power-law with index=2.
+
+Structure:
+    Column [0-1]: Minimum and maximum energy edges of each bin
+        (MeV).        
+    Column [2-27]: Energy flux upper limit (MeV cm^-2 s^-1;
+        type=eflux) or E^2 times the differential flux upper limit
+        (MeV cm^-2 s^-1; type=e2dfde) derived from each dwarf galaxy
+        in the energy bin specified by Columns [0-1].
+
+================================
+===  Bin-By-Bin Likelihoods  ===
+================================
+Number of files: 25
+File naming: like_<dwarf>.txt
+Description:
+    These files contain likelihood functions for each dwarf derived 
+    energy-bin by energy-bin, tabulated as the delta log-like value 
+    for 25 different values of the energy flux of a putative dwarf source.
+Structure:
+    Column [0-1]: Minimum and maximum energy edges of each
+        bin (MeV).        
+    Column [2]: Energy flux (MeV cm^-2 s^-1) of a putative dwarf
+        source integrated over the specified bin.        
+    Column [3]:   Delta log-likelihood as a function of
+        the energy flux of the source
+
+=========================
+===  Example Scripts  ===
+=========================
+Also included in this directory are a set of example scripts to 
+aid with a few potential usage cases. These scripts are merely 
+meant to illustrate how to operate with the data included here 
+and *DO NOT* represent a rigorous analysis, nor do they constitute 
+a fully fledged interface to the data themselves. A brief 
+description of the examples is included below.
+
+example1.py -- This example demonstrates how to load 
+               and plot the dark matter limit files.
+example2.py -- This example demonstrates how to load
+               and plot the bin-by-bin likelihood limits.
+example3.py -- This example demonstrates how to load
+               the bin-by-bin likelihood functions and a 
+               gamma-ray spectrum and compute spectrally-
+               dependent dark matter limits on the 
+               annihilation cross section.
+               NOTE: This script *DOES NOT* incorporate 
+               uncertainties on the measured J-factor.

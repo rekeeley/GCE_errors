@@ -7,7 +7,6 @@ import GCE_calcs
 
 
 
-
 #channel = 0  #tau
 channel = 1 #bbar
 
@@ -26,13 +25,10 @@ file_path = np.array(['spectra/tau/output-gammayield-','spectra/bbar/muomega-gam
 output_file = np.array([['tau_full','tau_noMG','tau_IC'],['bbar_full','bbar_noMG','bbar_IC']])[channel][model]
 
 
-N1_trunc=10
-#N1 = len(mass_table)#number of points used in the mass axis
-N1=20
+###################
+######  GCE part
+###################
 
-N2 = 20 #number of points used in the cross-section axis
-csmin = -27.
-csrange = 4.  #fit the order of magnitude of the cross-section so 1e-26 to 1e-23
 
 raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
                np.loadtxt('data/background/GCE_paper_noMG_spectrum.dat'),
@@ -103,6 +99,58 @@ post_nlp = log_like2 + np.log(J_prior)
 post_test = np.exp(log_like2)*J_prior
 
 post_test2 = np.trapz(post_test,x=J,axis=1)
+
+like_GCE = np.trapz(post_test,x=J,axis=1)
+
+evidence_GCE = np.sum(like_GCE)
+
+print evidence_GCE
+
+sigma_mass_prior = 1. / (n_sigma*n_mass)
+
+################
+### end GCE part
+################
+
+
+###################
+### Dwarfs
+###################
+
+
+data_draco = np.loadtxt('draco_data.txt')
+
+binned_spectra_draco = np.loadtxt('spectra/binned/binned_spectra_bbar_IC_draco.txt')
+
+print binned_spectra_draco.shape
+
+k_draco = data_draco[0]
+
+b_flux_draco = data_draco[1]
+
+exp_draco = data_draco[2]
+
+J_draco = np.logspace(18,20,n_J)
+
+J_draco_prior = GCE_calcs.analysis.get_J_prior_Draco(J_draco)
+
+norm_test = np.trapz(J_draco_prior,x=J_draco)
+
+assert np.abs(norm_test - 1) < 0.1, 'draco prior not normalized'
+
+mu_draco = GCE_calcs.calculations.get_mu(b_flux_draco*exp_draco, exp_draco, binned_spectra_draco, J_draco, sigma, mass_table)
+
+k_draco = np.tile(k_draco,(n_sigma,n_J,n_mass,1))
+
+log_like_draco = GCE_calcs.analysis.poisson_log_like(k_draco,mu_draco)
+
+print log_like_draco.shape
+
+
+
+
+
+
 
 post_test3 = np.log(post_test2)
 
