@@ -54,11 +54,12 @@ print 'the number flux is...'
 print nflux[:25]
 
 def test_log_like(k, b, e, Labs, f):
-    #
     return k*np.log((f + b)*e) - (f + b)*e - k*np.log(k) + k - Labs
 
-print test_log_like(1000,2.e-20,2e13,100.,nflux[:25])
+print 'the test of the log-like at the initial guess is...'
+print test_log_like(1000,2.e-10,2e13,100.,nflux[:25])
 
+print 'the data vector of the log-like is...'
 print delta_loglike[:25]
 
 fit_values = np.zeros((24,4))
@@ -80,25 +81,37 @@ for i in range(24):
 
 np.savetxt('draco_data.txt',fit_values)
 
-def test_log_like_gauss(k, b, e, Labs, f):
-    return -0.5*(k - (b+f)*e)**2/k - Labs
+print test_log_like(fit_values[0,0],fit_values[0,1],fit_values[0,2],fit_values[0,3],nflux[:25])
 
-fit_values_gauss = np.zeros((24,4))
-print 'now trying with a gaussian likelihood'
+print delta_loglike[:25]
 
-for i in range(24):
-    istart = i*25
-    iend = istart+25
-    def func(x):
-        dloglike = delta_loglike[istart:iend]
-        f = nflux[istart:iend]
-        return np.sum((test_log_like_gauss(x[0],x[1],x[2],x[3],f) - dloglike)**2)
-    x0 = np.array([1000, 2.e-10, 2.e13, 100.])
-    bnds = ((0,None), (0,None), (0,None), (None,None))
-    res = scop.minimize(func,x0,method = 'Nelder-Mead')
+plt.plot(nflux[:25],delta_loglike[:25],label = 'Fermi data')
+plt.plot(nflux[:25],test_log_like(fit_values[0,0],fit_values[0,1],fit_values[0,2],fit_values[0,3],nflux[:25]),label = 'Reconstruction')
+plt.xlabel(r'Number flux [cm$^{-2}$ sec$^{-1}$]')
+plt.ylabel(r'$\Delta$log-likelihood')
+plt.savefig('test_reconstruction.png')
+
+
+
+#def test_log_like_gauss(k, b, e, Labs, f):
+#    return -0.5*(k - (b+f)*e)**2/k - Labs
+
+#fit_values_gauss = np.zeros((24,4))
+#print 'now trying with a gaussian likelihood'
+
+#for i in range(24):
+#    istart = i*25
+#    iend = istart+25
+#    def func(x):
+#        dloglike = delta_loglike[istart:iend]
+#        f = nflux[istart:iend]
+#        return np.sum((test_log_like_gauss(x[0],x[1],x[2],x[3],f) - dloglike)**2)
+#    x0 = np.array([1000, 2.e-10, 2.e13, 100.])
+#    bnds = ((0,None), (0,None), (0,None), (None,None))
+#    res = scop.minimize(func,x0,method = 'Nelder-Mead')
     #print func(res.x)
     #print res.x
-    fit_values_gauss[i,:] = res.x
+#    fit_values_gauss[i,:] = res.x
 
 #print test_log_like(res.x[0],res.x[1],res.x[2],res.x[3],nflux[:25])
 

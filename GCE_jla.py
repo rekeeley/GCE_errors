@@ -20,6 +20,8 @@ dataset=20 #largest data point
 mass_table = np.array([np.loadtxt('spectra/tau/LSP-energies-original.dat')[:,1],
                        np.loadtxt('spectra/bbar/LSP-energies.dat')[:,1]])[channel] #table of masses
 
+#mass_table = np.array([])[channel]
+
 file_path = np.array(['spectra/tau/output-gammayield-','spectra/bbar/muomega-gammayield-'])[channel]
 
 output_file = np.array([['tau_full','tau_noMG','tau_IC'],['bbar_full','bbar_noMG','bbar_IC']])[channel][model]
@@ -44,6 +46,8 @@ background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
 binned_spectra = np.loadtxt('spectra/binned/binned_spectra_'+output_file+'_'+str(dataset)+'_'+str(trunc)+'.dat')
+#binned_spectra = np.loadtxt('spectra/test/binned/binned_spectra_'+output_file+'_'+str(dataset)+'_'+str(trunc)+'.dat')
+
 
 n_J=400
 #J = np.array([1.e21,1.e22,1.e23])

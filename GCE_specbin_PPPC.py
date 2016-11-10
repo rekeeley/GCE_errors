@@ -83,6 +83,14 @@ def spectra(m):
 
 
 
+def spectra2(m, emin, emax):
+    file_number = str(m)
+    number_spectra = np.loadtxt(file_path+file_number+'.dat')
+    binned_number_spectra = np.zeros(len(emin)))
+
+
+
+
 
 data_out = np.zeros((N1,len(data)))
 
