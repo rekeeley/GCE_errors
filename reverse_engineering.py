@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 like_name = np.array(['like_bootes_I',
                         'like_bootes_II',
                         'like_bootes_III',
-                        'like_cannes_venatici_I',
-                        'like_cannes_venatici_II',
+                        'like_canes_venatici_I',
+                        'like_canes_venatici_II',
                         'like_canis_major',
                         'like_carina',
                         'like_coma_berenices',
@@ -27,9 +27,10 @@ like_name = np.array(['like_bootes_I',
                         'like_ursa_major_I',
                         'like_ursa_major_II',
                         'like_ursa_minor',
-                        'like_wimmna_1'])
+                        'like_willman_1'])
 
-#for i in range(25):
+
+
 
 
 data = np.loadtxt('release-01-00-02/like_draco.txt',unpack=True)
@@ -91,6 +92,34 @@ plt.xlabel(r'Number flux [cm$^{-2}$ sec$^{-1}$]')
 plt.ylabel(r'$\Delta$log-likelihood')
 plt.savefig('test_reconstruction.png')
 
+
+
+for name in like_name:
+    print name
+    data = np.loadtxt('release-01-00-02/'+name+'.txt',unpack=True)
+    emin = data[0]
+    emax = data[1]
+    eflux = data[2]
+    delta_loglike = data[3]
+    emin_unique = np.unique(emin)
+    eavg = 0.5*(emax-emin)
+    nflux = eflux / eavg
+    fit_values = np.zeros((24,4))
+    for i in range(24):
+        istart = i*25
+        iend = istart+25
+        def func(x):
+            dloglike = delta_loglike[istart:iend]
+            f = nflux[istart:iend]
+            return np.sum((test_log_like(x[0],x[1],x[2],x[3],f) - dloglike)**2)
+        x0 = np.array([1000, 2.e-10, 2.e13, 100.])
+        bnds = ((0,None), (0,None), (0,None), (None,None))
+        res = scop.minimize(func,x0,method = 'Nelder-Mead')
+        fit_values[i,:] = res.x
+        assert fit_values[i,0] > 0, 'number count is not positive'
+        assert fit_values[i,1] > 0, 'exposure is not positive'
+        assert fit_values[i,2] > 0, ' background flux is not positive'
+    np.savetxt('dwarf_re_data/'+name+'_data.txt',fit_values)
 
 
 #def test_log_like_gauss(k, b, e, Labs, f):

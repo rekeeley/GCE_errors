@@ -37,7 +37,7 @@ raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
                np.loadtxt('data/background/GCE_paper_IC_spectrum.dat')])[model]
 
 
-bin_center = raw[trunc:dataset,0]
+bin_center = raw[trunc:dataset,0]#logarthmic bin center
 
 k =raw[trunc:dataset,5]
 

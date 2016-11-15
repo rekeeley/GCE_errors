@@ -1,8 +1,4 @@
 import numpy as np
-import scipy.optimize as scop
-import matplotlib.pyplot as plt
-from scipy import integrate
-import time
 
 
 #channel = 0  #tau
@@ -15,22 +11,26 @@ model = 2  #IC data
 dataset=20
 trunc=6
 
-#mass_table = np.array([np.loadtxt('spectra/tau/LSP-energies-original.dat')[:,1],
-#			np.loadtxt('spectra/bbar/LSP-energies.dat')[:,1]])[channel] #table of masses 
+mass_table = np.array([np.loadtxt('spectra/tau/LSP-energies-original.dat')[:,1],
+			np.loadtxt('spectra/bbar/LSP-energies.dat')[:,1]])[channel] #table of masses
 
+N1 = len(mass_table)
 
+#file_path = np.array(['spectra/test/tau/muomega-gammayield-','spectra/test/bbar/muomega-gammayield-'])[channel]
 
-file_path = np.array(['spectra/test/tau/muomega-gammayield-','spectra/test/bbar/muomega-gammayield-'])[channel]
+file_path = np.array(['spectra/tau/output-gammayield-','spectra/bbar/muomega-gammayield-'])[channel]
 
 output_file = np.array([['tau_full','tau_noMG','tau_IC'],['bbar_full','bbar_noMG','bbar_IC']])[channel][model]
+
+#output_path = 'spectra/test/binned/binned_spectra_'
+output_path = 'spectra/test2/binned/binned_spectra_'
 
 #N1 = 120#number of points used in the mass axis
 
 #mass_table = 20. + .5*np.arange(N1)
 
-N1 = np.array([100,120])[channel]
-mass_table = np.array([5.+.1*np.arange(N1),20. + .5*np.arange(N1)])[channel] #for tau case
-
+#N1 = np.array([100,120])[channel]
+#mass_table = np.array([5.+.1*np.arange(N1),20. + .5*np.arange(N1)])[channel] #for tau case
 
 raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
 		np.loadtxt('data/background/GCE_paper_noMG_spectrum.dat'),
@@ -52,12 +52,18 @@ for i in range(trunc,dataset):
 	data[i-trunc][6] =  raw[i][6]#exposure
 	data[i-trunc][7] =  raw[i][7]#background
 
+emin_GCE = 10**(raw[trunc:dataset,0] - 0.5*logdiff[0])
+emax_GCE = 10**(raw[trunc:dataset,0] + 0.5*logdiff[0])
+
 
 
 def spectra(m):
     #m is the number of the PPPC4DMID file to load and integrate over
     #these different files are for the different spectra for the different masses
-	file_number = str(m)
+    if m < 10:
+        file_number = '0'+str(m)
+    else:
+        file_number = str(m)
 	number_spectra = np.loadtxt(file_path+file_number+'.dat')
 	binned_number_spectra = np.zeros(len(data.T[0]))  #binning aka (integrating over the bins) the flux density
 	for i in range(len(data.T[0])):
@@ -83,32 +89,29 @@ def spectra(m):
 
 
 
-def spectra2(m, emin, emax):
-    file_number = str(m)
-    number_spectra = np.loadtxt(file_path+file_number+'.dat')
-    binned_number_spectra = np.zeros(len(emin)))
-
-
-
-
 
 data_out = np.zeros((N1,len(data)))
-
 
 for i in range(N1):
 	data_out[i,:] = spectra(i+1)
 
+np.savetxt(output_path+output_file+'_'+str(dataset)+'_'+str(trunc)+'.txt', data_out)
 
-np.savetxt('spectra/test/binned/binned_spectra_'+output_file+'_'+str(dataset)+'_'+str(trunc)+'.dat', data_out)
+
+
+
+
+
+#################
+#### Dwarfs part
+#################
 
 data_dwarfs = np.loadtxt('release-01-00-02/like_draco.txt')
 print data_dwarfs.shape
 emin = np.unique(data_dwarfs[:,0])/1000.
 emax = np.unique(data_dwarfs[:,1])/1000. #delete copies and convert from GeV to MeV
 
-def spectra_dwarfs(m):
-    file_number = str(m)
-    number_spectra = np.loadtxt(file_path+file_number+'.dat')
+def spectra2(number_spectra,emin,emax):
     binned_number_spectra = np.zeros(len(emin))
     for i in range(len(emin)):
         if emin[i] > number_spectra[-1,0]:
@@ -133,11 +136,30 @@ def spectra_dwarfs(m):
         binned_number_spectra[i] = np.trapz(number_spectra[imin:imax,1],x=number_spectra[imin:imax,0])
     return binned_number_spectra
 
+
+data_out_GCE = np.zeros((N1,len(emin_GCE)))
+for i in range(N1):
+    m = i+1
+    if m < 10:
+        file_number = '0'+str(m)
+    else:
+        file_number = str(m)
+    number_spectra = np.loadtxt(file_path+file_number+'.dat')
+    data_out_GCE[i,:] = spectra2(number_spectra,emin_GCE,emax_GCE)
+
+
 data_out_draco = np.zeros((N1,len(emin)))
 for i in range(N1):
-    data_out_draco[i,:] = spectra_dwarfs(i+1)
+    m = i+1
+    if m < 10:
+        file_number = '0'+str(m)
+    else:
+        file_number = str(m)
+    number_spectra = np.loadtxt(file_path+file_number+'.dat')
+    data_out_draco[i,:] = spectra2(number_spectra,emin,emax)
 
 
+np.savetxt(output_path+output_file +'GCE_test.txt',data_out_GCE )
 
-np.savetxt('spectra/test/binned/binned_spectra_'+output_file+'_draco.txt',data_out_draco)
+np.savetxt(output_path+output_file+'_draco.txt',data_out_draco)
 
