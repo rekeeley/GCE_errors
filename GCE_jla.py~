@@ -113,7 +113,7 @@ log_like_draco_4d = GCE_calcs.analysis.poisson_log_like(k_draco,mu_draco)
 
 log_like_draco_3d = np.sum(log_like_draco_4d,axis=3)
 
-draco_like_3d = np.exp(log_like_draco_3d)*J_draco_prior
+draco_like_3d = np.exp(log_like_draco)*J_draco_prior
 
 draco_like_2d = np.trapz(draco_like_3d,x=J_draco,axis=1)
 
