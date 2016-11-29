@@ -121,6 +121,9 @@ evidence_draco = np.sum(draco_like_2d)*sigma_mass_prior
 
 print evidence_draco
 
+
+
+
 #levels = [0,1,3,6,12]
 #plt.contour(mass_table,log_sigma,-post_log_pdf[:,2,:],levels)
 #plt.contour(mass_table,np.log10(sigma),-post_nlp_min2,levels)

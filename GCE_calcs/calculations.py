@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.optimize as scop
 from scipy import integrate
+from scipy.special import erf
+
 
 
 def density(x,y,scale_radius,  gamma): #NFW density profile
@@ -51,7 +53,27 @@ def conc():
         conc += coeff[i]*np.log(h*Mmw)**i
     return conc
 
+def get_mu_log_parab(bckgrnd,exposure,num_spec):
+    #each of the inputs should be arrays of the shape (n_N0, n_alpha, n_beta, n_eb, n_spec)
+    return bckgrnd + exposure*num_spec
 
-
-
+def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin)
+    #emax is a vector of len n_spec, the maxima energy of each bin
+    #emin is a vector of len n_spec, the minima energy of each bin
+    #E_b is a vector of len n_eb, the scale energy for the log-parabola
+    #beta is a vector of len n_beta, the parameter for exponential cutoff,
+    #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
+    #N0 is a vector of len n_N0, the parameter for the normalization
+    n_spec = len(emax)
+    n_eb = len(Eb)
+    n_beta = len(beta)
+    n_alpha = len(alpha)
+    n_N0 = len(N0)
+    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_alpha,n_beta,n_eb,n_spec))
+    alpha = np.tile(alpha[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_N0,1,n_beta,n_eb,n_spec))
+    beta = np.tile(beta[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_N0,n_alpha,1,n_eb,n_spec))
+    Eb = np.tile(Eb)[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_alpha,n_beta,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
+    return N0 * exp(- (alpha-1)**2 / (4*beta))*np.pi**0.5 * (erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) ) - erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5))) / (2*beta**0.5)
 
