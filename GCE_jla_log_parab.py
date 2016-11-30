@@ -35,14 +35,20 @@ k = raw[trunc:dataset,5]
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
-Eb = np.logspace(-2,2,200)
-alpha = np.linspace(0,10,100)
-beta = np.linspace(0,10,100)
-N0_GCE = np.logspace(-3,4,70)
+Eb = np.logspace(-2,2,20)
+alpha = np.linspace(0,10,10)
+beta = np.linspace(0.01,10,10)
+N0_GCE = np.logspace(-7,0,7)
 
-binned_spectra = GCE_calcs.calculations.get_spec_log_parap(N0_GCE,alpha,beta,Eb,emin_GCE,emax_GCE)
+binned_spectra = GCE_calcs.calculations.get_spec_log_parab(N0_GCE,alpha,beta,Eb,emax_GCE,emin_GCE)
 
-n_spec = len(emax_GCE)
+#print binned_spectra[0,0,0,0,:]
+#print binned_spectra[0,0,0,:,0]
+#print binned_spectra[0,0,:,0,0]
+#print binned_spectra[0,:,0,0,0]
+#print binned_spectra[:,0,0,0,0]
+
+
 n_eb = len(Eb)
 n_beta = len(beta)
 n_alpha = len(alpha)
@@ -54,37 +60,86 @@ k = np.tile(k[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_bet
 
 mu_GCE = GCE_calcs.calculations.get_mu_log_parab(background,exposure,binned_spectra)
 
+#print mu_GCE[0,0,0,:,0]
+#print mu_GCE[0,0,:,0,0]
+#print mu_GCE[0,:,0,0,0]
+#print mu_GCE[:,0,0,0,0]
+
+#print mu_GCE[:,0,0,0,:]
+
+#print background[0,0,0,0,:]
+#print k[0,0,0,0,:] - background[0,0,0,0,:]
+
+plt.plot(10**bin_center,background[0,0,0,0,:],label = 'background')
+plt.errorbar(10**bin_center,k[0,0,0,0,:],yerr = np.sqrt(k[0,0,0,0,:]),label = 'observed counts')
+plt.plot(10**bin_center, mu_GCE[0,n_alpha/2,n_beta/2,n_eb/2,:],label = 'expected counts')
+plt.xlabel('Energy [GeV]')
+plt.ylabel('Number Counts')
+plt.legend(loc='best')
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('log_parab_test.png')
+plt.clf()
+
+
 log_like_GCE_5d = GCE_calcs.analysis.poisson_log_like(k,mu_GCE)
 
 log_like_GCE_4d = np.sum(log_like_GCE_5d,axis=4)
 
 like_GCE_4d = np.exp(log_like_GCE_4d)
 
+zero_test = np.count_nonzero(like_GCE_4d)
+
+print 'the number of non-zero elements are' + str(zero_test)
+
 N0_prior_norm = np.trapz(np.ones(n_N0),x = np.log(N0_GCE))
 
-print N0_prior_norm
+print 'the norm of the N0 prior is '+ str(N0_prior_norm)
 
 like_GCE_3d = np.trapz(like_GCE_4d, x = np.log(N0_GCE),axis=0) / N0_prior_norm
 
+#print like_GCE_3d
+
 Eb_prior_norm = np.trapz(np.ones(n_eb),x = np.log(Eb))
 
-print Eb_prior_norm
+print 'the norm of the E_b prior is '+ str(Eb_prior_norm)
 
 like_GCE_2d = np.trapz(like_GCE_3d, x = np.log(Eb),axis = 2) / Eb_prior_norm
 
+zero_test_2d = np.count_nonzero(like_GCE_2d)
+
+print 'the number of non-zero elements are' + str(zero_test_2d)
+
 alpha_prior_norm = np.trapz(np.ones(n_alpha),x = alpha)
 
-print alpha_prior_norm
+print 'the norm of the alpha prior is '+ str(alpha_prior_norm)
 
 like_GCE_1d = np.trapz(like_GCE_2d, x = alpha, axis = 0)
 
 beta_prior_norm = np.trapz(np.ones(n_beta), x = beta)
 
-print beta_prior_norm
+print 'the norm of the beta prior is '+ str(beta_prior_norm)
 
-like_GCE = np.trapz(like_GCE_1d, x = beta)
+like_GCE = np.trapz(like_GCE_1d, x = beta)/beta_prior_norm
 
-print like_GCE 
+#print like_GCE
+
+#print like_GCE_2d
+
+delta_log_like_2d = -(np.log(like_GCE_2d) - np.log(like_GCE_2d.max()))
+
+print delta_log_like_2d.shape
+
+print alpha
+print beta
+
+#print delta_log_like_2d
+
+print np.argmax(like_GCE_2d,axis=0)
+
+levels = [0,1,3,6]
+plt.contour(alpha, beta, delta_log_like_2d ,levels)
+plt.savefig('posterior_test.png')
 
 
 
