@@ -83,5 +83,5 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #return N0 * Eb*np.exp(- (alpha-1)**2 / (4*beta))*np.pi**0.5 * (erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) ) - erf( ((alpha-1) + 2*beta*np.log(emin/Eb)) / (2*beta**0.5))) / (2*beta**0.5)
     #return N0 * erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
     #return N0 *  ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5)
-    return N0*Eb*0.5*np.sqrt(np.pi/beta) * (erf(np.sqrt(beta)*np.log(emax/Eb)) - erf(np.sqrt(beta)*np.log(emin/Eb)))
+    return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
 
