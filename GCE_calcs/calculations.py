@@ -85,3 +85,16 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #return N0 *  ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5)
     return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
 
+
+def get_dn_de_log_parab(N0,alpha,beta,Eb,energy):
+    n_spec = len(energy)
+    n_eb = len(Eb)
+    n_beta = len(beta)
+    n_alpha = len(alpha)
+    n_N0 = len(N0)
+    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_alpha,n_beta,n_eb,n_spec))
+    alpha = np.tile(alpha[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_N0,1,n_beta,n_eb,n_spec))
+    beta = np.tile(beta[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_N0,n_alpha,1,n_eb,n_spec))
+    Eb = np.tile(Eb[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_alpha,n_beta,1,n_spec))
+    energy = np.tile(energy[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
+    return N0*(energy/Eb)**(-alpha - beta*np.log(energy/Eb))

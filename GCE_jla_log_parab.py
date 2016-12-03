@@ -20,7 +20,7 @@ model = 0  #MG aka full
 #model = 1  #noMG
 #model = 2  IC data
 
-trunc = 0  #how many data points truncated from the front
+trunc = 8  #how many data points truncated from the front
 dataset=20 #largest data point
 
 raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
@@ -35,12 +35,16 @@ k = raw[trunc:dataset,5]
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
-Eb = np.logspace(-2,2,20)
-alpha = np.linspace(0,2,20)
-beta = np.linspace(0.01,2,20)
-N0_GCE = np.logspace(-10,-3,14)
+Eb = np.logspace(-2,2,40)
+alpha = np.linspace(-2,2,40)
+beta = np.linspace(0.01,2,40)
+N0_GCE = np.logspace(-8,-6,40)
 
 binned_spectra = GCE_calcs.calculations.get_spec_log_parab(N0_GCE,alpha,beta,Eb,emax_GCE,emin_GCE)
+
+unbinned_spectra = GCE_calcs.calculations.get_dn_de_log_parab(N0_GCE,alpha,beta,Eb,10**bin_center)
+
+
 
 #print binned_spectra[0,0,0,0,:]
 #print binned_spectra[0,0,0,:,0]
@@ -70,16 +74,6 @@ mu_GCE = GCE_calcs.calculations.get_mu_log_parab(background,exposure,binned_spec
 #print background[0,0,0,0,:]
 #print k[0,0,0,0,:] - background[0,0,0,0,:]
 
-plt.plot(10**bin_center,background[0,0,0,0,:],label = 'background')
-plt.errorbar(10**bin_center,k[0,0,0,0,:],yerr = np.sqrt(k[0,0,0,0,:]),label = 'observed counts')
-plt.plot(10**bin_center, mu_GCE[0,n_alpha/2,n_beta/2,n_eb/2,:],label = 'expected counts')
-plt.xlabel('Energy [GeV]')
-plt.ylabel('Number Counts')
-plt.legend(loc='best')
-plt.xscale('log')
-plt.yscale('log')
-plt.savefig('log_parab_test.png')
-plt.clf()
 
 
 log_like_GCE_5d = GCE_calcs.analysis.poisson_log_like(k,mu_GCE)
@@ -96,6 +90,37 @@ print 'the max alpha is ' + str(alpha[max_index[1]])
 print 'the max beta is ' + str(beta[max_index[2]])
 print 'the max Eb is ' + str(Eb[max_index[3]])
 print 'the max N0 is ' + str(N0_GCE[max_index[0]])
+
+
+plt.plot(10**bin_center,background[0,0,0,0,:],label = 'background')
+plt.errorbar(10**bin_center,k[0,0,0,0,:],yerr = np.sqrt(k[0,0,0,0,:]),label = 'observed counts')
+plt.plot(10**bin_center, mu_GCE[max_index[0],max_index[1],max_index[2],max_index[3],:],label = 'expected counts')
+plt.xlabel('Energy [GeV]')
+plt.ylabel('Number Counts')
+plt.legend(loc='best')
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('log_parab_test.png')
+plt.clf()
+
+
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:])
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:])
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:])
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('beta_test.png')
+plt.clf()
+
+plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:])
+plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:])
+plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:])
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('unbinned_spectra.png')
+plt.clf()
+
+
 
 like_GCE_4d = np.exp(log_like_GCE_4d)
 
@@ -141,6 +166,26 @@ delta_log_like_2d = -(np.log(like_GCE_2d) - np.log(like_GCE_2d.max()))
 
 print delta_log_like_2d.shape
 
+
+posterior_N0 = np.trapz(np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=beta,axis=2),x=alpha,axis=1)/alpha_prior_norm/beta_prior_norm/Eb_prior_norm
+
+posterior_N0_beta = np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=alpha,axis=1)
+
+plt.plot(N0_GCE,posterior_N0 / posterior_N0.max())
+plt.xscale('log')
+plt.xlabel('Normalization')
+plt.ylabel('scaled probability')
+plt.savefig('N0_posterior.png')
+plt.clf()
+
+levels = [0,1,3,6,10]
+plt.contour(N0_GCE,beta,-np.log(posterior_N0_beta / posterior_N0_beta.max()))
+plt.xscale('log')
+plt.xlabel('normalization')
+plt.ylabel('beta')
+plt.savefig('N0_beta_posterior.png')
+plt.clf()
+
 #print alpha
 #print beta
 
@@ -148,13 +193,13 @@ print delta_log_like_2d.shape
 
 #print np.argmax(like_GCE_2d,axis=0)
 
-levels = [0,1,3,6,10]
 plt.contour(alpha, beta, delta_log_like_2d ,levels)
 #plt.xlim(0,2)
 #plt.ylim(6,8)
 plt.xlabel('alpha')
 plt.ylabel('beta')
 plt.savefig('posterior_test.png')
+plt.clf()
 
 
 
