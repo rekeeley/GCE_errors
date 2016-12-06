@@ -98,3 +98,23 @@ def get_dn_de_log_parab(N0,alpha,beta,Eb,energy):
     Eb = np.tile(Eb[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_alpha,n_beta,1,n_spec))
     energy = np.tile(energy[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
     return N0*(energy/Eb)**(-alpha - beta*np.log(energy/Eb))
+
+
+
+def get_spec_log_parab_for_minimizing(N0,alpha,beta,Eb,emax,emin):
+    #emax is a vector of len n_spec, the maxima energy of each bin
+    #emin is a vector of len n_spec, the minima energy of each bin
+    #E_b is a vector of len n_eb, the scale energy for the log-parabola
+    #beta is a vector of len n_beta, the parameter for exponential cutoff,
+    #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
+    #N0 is a vector of len n_N0, the parameter for the normalization
+    #print N0
+    #print alpha
+    #print beta
+    #print Eb
+    #print erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
+    #return N0 * Eb*np.exp(- (alpha-1)**2 / (4*beta))*np.pi**0.5 * (erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) ) - erf( ((alpha-1) + 2*beta*np.log(emin/Eb)) / (2*beta**0.5))) / (2*beta**0.5)
+    #return N0 * erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
+    #return N0 *  ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5)
+    return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
+

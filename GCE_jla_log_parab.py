@@ -35,16 +35,18 @@ k = raw[trunc:dataset,5]
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
-Eb = np.logspace(-2,2,40)
-alpha = np.linspace(-2,2,40)
+Eb = np.logspace(-1,0.5,40)
+alpha = np.linspace(-3,1.5,40)
 beta = np.linspace(0.01,2,40)
-N0_GCE = np.logspace(-8,-6,40)
+N0_GCE = np.logspace(-8,-5,40)
 
 binned_spectra = GCE_calcs.calculations.get_spec_log_parab(N0_GCE,alpha,beta,Eb,emax_GCE,emin_GCE)
 
 unbinned_spectra = GCE_calcs.calculations.get_dn_de_log_parab(N0_GCE,alpha,beta,Eb,10**bin_center)
 
+test_spec_type = GCE_calcs.calculations.get_spec_log_parab_for_minimizing(3.e-6,-1.8,.775,0.1859,emax_GCE,emin_GCE)
 
+print test_spec_type
 
 #print binned_spectra[0,0,0,0,:]
 #print binned_spectra[0,0,0,:,0]
@@ -84,7 +86,7 @@ log_like_GCE_4d = np.sum(log_like_GCE_5d,axis=4)
 
 max_index = np.unravel_index(log_like_GCE_4d.argmax(),log_like_GCE_4d.shape)
 
-print 'the index of the max prob is ' + str(max_index)
+#print 'the index of the max prob is ' + str(max_index)
 
 print 'the max alpha is ' + str(alpha[max_index[1]])
 print 'the max beta is ' + str(beta[max_index[2]])
@@ -104,22 +106,120 @@ plt.savefig('log_parab_test.png')
 plt.clf()
 
 
-plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:])
-plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:])
-plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:])
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:],label = 'maximum')
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:],label = 'beta = ' + str(beta[max_index[2]+2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:],label = 'beta = ' + str(beta[max_index[2]-2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]+2,max_index[2],max_index[3],:],label = 'alpha =  ' + str(alpha[max_index[2]+2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]-2,max_index[2],max_index[3],:],label = 'alpha = ' + str(alpha[max_index[2]-2]))
+plt.legend(loc='best')
 plt.xscale('log')
 plt.yscale('log')
 plt.savefig('beta_test.png')
 plt.clf()
 
-plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:])
-plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:])
-plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:])
+#plt.plot(10**bin_center,background[0,0,0,0,:],label = 'background')
+plt.errorbar(10**bin_center,(k[0,0,0,0,:] - background[0,0,0,0,:])/exposure[0,0,0,0,:],yerr = np.sqrt(k[0,0,0,0,:])/exposure[0,0,0,0,:],label = 'observed residual')
+plt.plot(10**bin_center, binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:],label = 'max binned DM number flux')
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:],label = 'beta = ' +  str(beta[max_index[2]+2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:],label = 'beta = ' +  str(beta[max_index[2]-2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]+2,max_index[2],max_index[3],:],label = 'alpha = ' +  str(alpha[max_index[1]+2]))
+plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]-2,max_index[2],max_index[3],:],label = 'alpha = ' + str(alpha[max_index[1]-2]))
+plt.xlabel('Energy [GeV]')
+plt.ylabel('Number Flux [cm^-2 sec^-1]')
+plt.legend(loc='best')
 plt.xscale('log')
-plt.yscale('log')
-plt.savefig('unbinned_spectra.png')
+#plt.yscale('log')
+plt.savefig('residual_test.png')
 plt.clf()
 
+
+#plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2],max_index[3],:])
+#plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]+2,max_index[3],:])
+#plt.plot(10**bin_center,unbinned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:])
+#plt.xscale('log')
+#plt.yscale('log')
+#plt.savefig('unbinned_spectra.png')
+#plt.clf()
+
+#########################
+### plotting slices of the 4-d log-like
+#########################
+
+
+levels = [0,1,3,6,10,15,25,36,49]
+plt.contour(alpha,beta,-log_like_GCE_4d[max_index[0],:,:,max_index[3]].T  + log_like_GCE_4d.max(),levels)
+plt.xlabel('alpha')
+plt.ylabel('beta')
+plt.savefig('alpha_beta_slice.png')
+plt.clf()
+
+max_index_alpha_beta = np.unravel_index(log_like_GCE_4d[max_index[0],:,:,max_index[3]].argmax(),log_like_GCE_4d[max_index[0],:,:,max_index[3]].shape)
+
+#print 'the index of the max prob in the alpha_beta slice is ' + str(max_index_alpha_beta)
+
+
+
+plt.contour(alpha,Eb, -log_like_GCE_4d[max_index[0],:,max_index[2],:].T + log_like_GCE_4d.max(),levels)
+plt.xlabel('alpha')
+plt.ylabel('Eb')
+plt.yscale('log')
+plt.savefig('alpha_Eb_slice.png')
+plt.clf()
+
+max_index_alpha_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],:,max_index[2],:].argmax(),log_like_GCE_4d[max_index[0],:,max_index[2],:].shape)
+
+#print 'the index of the max prob in the alpha_Eb slice is ' + str(max_index_alpha_Eb)
+
+
+
+
+plt.contour(N0_GCE,alpha, -log_like_GCE_4d[:,:,max_index[2],max_index[3]].T + log_like_GCE_4d.max(),levels)
+plt.xlabel('N0')
+plt.xscale('log')
+plt.ylabel('alpha')
+plt.savefig('N0_alpha_slice.png')
+plt.clf()
+
+max_index_N0_alpha = np.unravel_index(log_like_GCE_4d[:,:,max_index[2],max_index[3]].argmax(),log_like_GCE_4d[:,:,max_index[2],max_index[3]].shape)
+
+#print 'the index of the max prob in the N0_alpha slice is ' + str(max_index_N0_alpha)
+
+
+plt.contour(N0_GCE,beta, -log_like_GCE_4d[:,max_index[1],:,max_index[3]].T + log_like_GCE_4d.max(),levels)
+plt.xlabel('N0')
+plt.xscale('log')
+plt.ylabel('beta')
+plt.savefig('N0_beta_slice.png')
+plt.clf()
+
+max_index_N0_beta = np.unravel_index(log_like_GCE_4d[:,max_index[1],:,max_index[3]].argmax(),log_like_GCE_4d[:,max_index[1],:,max_index[3]].shape)
+
+#print 'the index of the max prob in the N0_beta slice is ' + str(max_index_N0_beta)
+
+
+plt.contour(N0_GCE,Eb, -log_like_GCE_4d[:,max_index[1],max_index[2],:].T + log_like_GCE_4d.max(),levels)
+plt.xlabel('N0')
+plt.xscale('log')
+plt.ylabel('Eb')
+plt.yscale('log')
+plt.savefig('N0_Eb_slice.png')
+plt.clf()
+
+max_index_N0_Eb = np.unravel_index(log_like_GCE_4d[:,max_index[1],max_index[2],:].argmax(),log_like_GCE_4d[:,max_index[1],max_index[2],:].shape)
+
+#print 'the index of the max prob in the N0_Eb slice is ' + str(max_index_N0_Eb)
+
+
+plt.contour(beta,Eb, -log_like_GCE_4d[max_index[0],max_index[1],:,:].T + log_like_GCE_4d.max(),levels)
+plt.xlabel('beta')
+plt.ylabel('Eb')
+plt.yscale('log')
+plt.savefig('beta_Eb_slice.png')
+plt.clf()
+
+max_index_beta_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],max_index[1],:,:].argmax(),log_like_GCE_4d[max_index[0],max_index[1],:,:].shape)
+
+#print 'the index of the max prob in the beta_Eb slice is ' + str(max_index_beta_Eb)
 
 
 like_GCE_4d = np.exp(log_like_GCE_4d)
@@ -164,7 +264,7 @@ print like_GCE
 
 delta_log_like_2d = -(np.log(like_GCE_2d) - np.log(like_GCE_2d.max()))
 
-print delta_log_like_2d.shape
+#print delta_log_like_2d.shape
 
 
 posterior_N0 = np.trapz(np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=beta,axis=2),x=alpha,axis=1)/alpha_prior_norm/beta_prior_norm/Eb_prior_norm
