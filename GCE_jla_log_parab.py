@@ -35,10 +35,11 @@ k = raw[trunc:dataset,5]
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
-Eb = np.logspace(-1,0.5,40)
-alpha = np.linspace(-3,1.5,40)
-beta = np.linspace(0.01,2,40)
-N0_GCE = np.logspace(-8,-5,40)
+#Eb = np.logspace(-1,0.5,40)
+Eb = np.array([0.2])
+alpha = np.linspace(-3,1.5,100)
+beta = np.linspace(0.01,2,100)
+N0_GCE = 3.*np.logspace(-8,-5,100)
 
 binned_spectra = GCE_calcs.calculations.get_spec_log_parab(N0_GCE,alpha,beta,Eb,emax_GCE,emin_GCE)
 
@@ -46,7 +47,7 @@ unbinned_spectra = GCE_calcs.calculations.get_dn_de_log_parab(N0_GCE,alpha,beta,
 
 test_spec_type = GCE_calcs.calculations.get_spec_log_parab_for_minimizing(3.e-6,-1.8,.775,0.1859,emax_GCE,emin_GCE)
 
-print test_spec_type
+#print test_spec_type
 
 #print binned_spectra[0,0,0,0,:]
 #print binned_spectra[0,0,0,:,0]
@@ -86,7 +87,7 @@ log_like_GCE_4d = np.sum(log_like_GCE_5d,axis=4)
 
 max_index = np.unravel_index(log_like_GCE_4d.argmax(),log_like_GCE_4d.shape)
 
-#print 'the index of the max prob is ' + str(max_index)
+print 'the index of the max prob is ' + str(max_index)
 
 print 'the max alpha is ' + str(alpha[max_index[1]])
 print 'the max beta is ' + str(beta[max_index[2]])
@@ -124,6 +125,8 @@ plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]+2,
 plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2]-2,max_index[3],:],label = 'beta = ' +  str(beta[max_index[2]-2]))
 plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]+2,max_index[2],max_index[3],:],label = 'alpha = ' +  str(alpha[max_index[1]+2]))
 plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1]-2,max_index[2],max_index[3],:],label = 'alpha = ' + str(alpha[max_index[1]-2]))
+#plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3]+2,:],label = 'Eb = ' + str(Eb[max_index[3]+2]))
+#plt.plot(10**bin_center,binned_spectra[max_index[0],max_index[1],max_index[2],max_index[3]-2,:],label = 'Eb = ' + str(Eb[max_index[3]-2]))
 plt.xlabel('Energy [GeV]')
 plt.ylabel('Number Flux [cm^-2 sec^-1]')
 plt.legend(loc='best')
@@ -159,14 +162,14 @@ max_index_alpha_beta = np.unravel_index(log_like_GCE_4d[max_index[0],:,:,max_ind
 
 
 
-plt.contour(alpha,Eb, -log_like_GCE_4d[max_index[0],:,max_index[2],:].T + log_like_GCE_4d.max(),levels)
-plt.xlabel('alpha')
-plt.ylabel('Eb')
-plt.yscale('log')
-plt.savefig('alpha_Eb_slice.png')
-plt.clf()
+#plt.contour(alpha,Eb, -log_like_GCE_4d[max_index[0],:,max_index[2],:].T + log_like_GCE_4d.max(),levels)
+#plt.xlabel('alpha')
+#plt.ylabel('Eb')
+#plt.yscale('log')
+#plt.savefig('alpha_Eb_slice.png')
+#plt.clf()
 
-max_index_alpha_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],:,max_index[2],:].argmax(),log_like_GCE_4d[max_index[0],:,max_index[2],:].shape)
+#max_index_alpha_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],:,max_index[2],:].argmax(),log_like_GCE_4d[max_index[0],:,max_index[2],:].shape)
 
 #print 'the index of the max prob in the alpha_Eb slice is ' + str(max_index_alpha_Eb)
 
@@ -197,27 +200,27 @@ max_index_N0_beta = np.unravel_index(log_like_GCE_4d[:,max_index[1],:,max_index[
 #print 'the index of the max prob in the N0_beta slice is ' + str(max_index_N0_beta)
 
 
-plt.contour(N0_GCE,Eb, -log_like_GCE_4d[:,max_index[1],max_index[2],:].T + log_like_GCE_4d.max(),levels)
-plt.xlabel('N0')
-plt.xscale('log')
-plt.ylabel('Eb')
-plt.yscale('log')
-plt.savefig('N0_Eb_slice.png')
-plt.clf()
+#plt.contour(N0_GCE,Eb, -log_like_GCE_4d[:,max_index[1],max_index[2],:].T + log_like_GCE_4d.max(),levels)
+#plt.xlabel('N0')
+#plt.xscale('log')
+#plt.ylabel('Eb')
+#plt.yscale('log')
+#plt.savefig('N0_Eb_slice.png')
+#plt.clf()
 
-max_index_N0_Eb = np.unravel_index(log_like_GCE_4d[:,max_index[1],max_index[2],:].argmax(),log_like_GCE_4d[:,max_index[1],max_index[2],:].shape)
+#max_index_N0_Eb = np.unravel_index(log_like_GCE_4d[:,max_index[1],max_index[2],:].argmax(),log_like_GCE_4d[:,max_index[1],max_index[2],:].shape)
 
 #print 'the index of the max prob in the N0_Eb slice is ' + str(max_index_N0_Eb)
 
 
-plt.contour(beta,Eb, -log_like_GCE_4d[max_index[0],max_index[1],:,:].T + log_like_GCE_4d.max(),levels)
-plt.xlabel('beta')
-plt.ylabel('Eb')
-plt.yscale('log')
-plt.savefig('beta_Eb_slice.png')
-plt.clf()
+#plt.contour(beta,Eb, -log_like_GCE_4d[max_index[0],max_index[1],:,:].T + log_like_GCE_4d.max(),levels)
+#plt.xlabel('beta')
+#plt.ylabel('Eb')
+#plt.yscale('log')
+#plt.savefig('beta_Eb_slice.png')
+#plt.clf()
 
-max_index_beta_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],max_index[1],:,:].argmax(),log_like_GCE_4d[max_index[0],max_index[1],:,:].shape)
+#max_index_beta_Eb = np.unravel_index(log_like_GCE_4d[max_index[0],max_index[1],:,:].argmax(),log_like_GCE_4d[max_index[0],max_index[1],:,:].shape)
 
 #print 'the index of the max prob in the beta_Eb slice is ' + str(max_index_beta_Eb)
 
@@ -236,11 +239,13 @@ like_GCE_3d = np.trapz(like_GCE_4d, x = np.log(N0_GCE),axis=0) / N0_prior_norm
 
 #print like_GCE_3d
 
-Eb_prior_norm = np.trapz(np.ones(n_eb),x = np.log(Eb))
+#Eb_prior_norm = np.trapz(np.ones(n_eb),x = np.log(Eb))
 
 #print 'the norm of the E_b prior is '+ str(Eb_prior_norm)
 
-like_GCE_2d = np.trapz(like_GCE_3d, x = np.log(Eb),axis = 2) / Eb_prior_norm
+#like_GCE_2d = np.trapz(like_GCE_3d, x = np.log(Eb),axis = 2) / Eb_prior_norm
+
+like_GCE_2d = like_GCE_3d[:,:,0]
 
 zero_test_2d = np.count_nonzero(like_GCE_2d)
 
@@ -262,14 +267,19 @@ print like_GCE
 
 #print like_GCE_2d
 
-delta_log_like_2d = -(np.log(like_GCE_2d) - np.log(like_GCE_2d.max()))
-
-#print delta_log_like_2d.shape
 
 
-posterior_N0 = np.trapz(np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=beta,axis=2),x=alpha,axis=1)/alpha_prior_norm/beta_prior_norm/Eb_prior_norm
+#posterior_N0 = np.trapz(np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=beta,axis=2),x=alpha,axis=1)/alpha_prior_norm/beta_prior_norm/Eb_prior_norm
 
-posterior_N0_beta = np.trapz(np.trapz(like_GCE_4d,x = Eb,axis=3),x=alpha,axis=1)
+posterior_N0 = np.trapz(np.trapz(like_GCE_4d[:,:,:,0],x = beta, axis = 2),x = alpha, axis = 1)
+
+posterior_alpha = np.trapz(np.trapz(like_GCE_4d[:,:,:,0],x = np.log(N0_GCE),axis=0),x = beta, axis=1)
+
+posterior_beta = np.trapz(np.trapz(like_GCE_4d[:,:,:,0],x = np.log(N0_GCE),axis=0),x = alpha, axis=0)
+
+posterior_N0_beta = np.trapz(like_GCE_4d[:,:,:,0],x=alpha,axis=1)
+
+posterior_N0_alpha = np.trapz(like_GCE_4d[:,:,:,0],x = beta, axis=2)
 
 plt.plot(N0_GCE,posterior_N0 / posterior_N0.max())
 plt.xscale('log')
@@ -278,8 +288,30 @@ plt.ylabel('scaled probability')
 plt.savefig('N0_posterior.png')
 plt.clf()
 
-levels = [0,1,3,6,10]
-plt.contour(N0_GCE,beta,-np.log(posterior_N0_beta / posterior_N0_beta.max()))
+plt.plot(alpha,posterior_alpha / posterior_alpha.max())
+#plt.xscale('log')
+plt.xlabel('alpha')
+plt.ylabel('scaled probability')
+plt.savefig('alpha_posterior.png')
+plt.clf()
+
+plt.plot(beta,posterior_beta / posterior_beta.max())
+#plt.xscale('log')
+plt.xlabel('beta')
+plt.ylabel('scaled probability')
+plt.savefig('beta_posterior.png')
+plt.clf()
+
+plt.contour(N0_GCE,alpha,-np.log(posterior_N0_alpha.T  / posterior_N0_alpha.max()))
+plt.xscale('log')
+plt.xlabel('normalization')
+plt.ylabel('alpha')
+plt.savefig('N0_alpha_posterior.png')
+plt.clf()
+
+
+#levels = [0,1,3,6,10]
+plt.contour(N0_GCE,beta,-np.log(posterior_N0_beta.T  / posterior_N0_beta.max()))
 plt.xscale('log')
 plt.xlabel('normalization')
 plt.ylabel('beta')
@@ -293,12 +325,12 @@ plt.clf()
 
 #print np.argmax(like_GCE_2d,axis=0)
 
-plt.contour(alpha, beta, delta_log_like_2d ,levels)
+plt.contour(alpha, beta, -np.log(like_GCE_2d.T) + np.log(like_GCE_2d.max()) ,levels)
 #plt.xlim(0,2)
 #plt.ylim(6,8)
 plt.xlabel('alpha')
 plt.ylabel('beta')
-plt.savefig('posterior_test.png')
+plt.savefig('alpha_beta_posterior.png')
 plt.clf()
 
 
@@ -310,22 +342,71 @@ plt.clf()
 #Eb = np.logspace(-2,2,200)
 #alpha = np.linspace(0,10,100)
 #beta = np.linspace(0,10,100)
-N0_dwarfs = np.logspace(-3,4,70)
+data_energy_draco = np.loadtxt('release-01-00-02/like_draco.txt')
+emin_dwarf = np.unique(data_energy_draco[:,0])/1000.
+emax_dwarf = np.unique(data_energy_draco[:,1])/1000. #delete copies and convert from MeV to GeV
+data_draco = np.loadtxt('dwarf_re_data/like_draco_data.txt')
+k_draco = data_draco[:,0]
+back_flux_draco = data_draco[:,1]
+expo_draco = data_draco[:,2]
 
+N0_dwarfs = np.logspace(-9,-5,70)
 
-#levels = [0,1,3,6,12]
-#plt.contour(mass_table,log_sigma,-post_log_pdf[:,2,:],levels)
-#plt.contour(mass_table,np.log10(sigma),-post_nlp_min2,levels)
-#plt.contour(mass_table,np.log10(sigma),-post_test4,levels)
-#plt.savefig('array_test.png')
+binned_spectra_draco = GCE_calcs.calculations.get_spec_log_parab(N0_dwarfs,alpha,beta,Eb,emax_dwarf,emin_dwarf)
+mu_draco = GCE_calcs.calculations.get_mu_log_parab(expo_draco*back_flux_draco,expo_draco,binned_spectra_draco)
+log_like_draco_5d = GCE_calcs.analysis.poisson_log_like(k_draco,mu_draco)
 
+log_like_draco_4d = np.sum(log_like_draco_5d,axis=4)
 
+N0_draco_posterior = np.trapz(np.trapz(log_like_draco_4d[:,:,:,0],x = alpha,axis=1),x = beta,axis=1)
 
-#plt.plot(bin_center,k,label = 'data')
-#plt.plot(bin_center,background,label = 'background')
-#for i in range(5):
-#    plt.plot(bin_center,mu[n_sigma/2,n_J/2,5+10*i,:],label = str(mass_table[5+10*i]))
-#plt.legend(loc='best')
-#plt.savefig('spectra_test.png')
-#plt.clf()
+alpha_draco_posterior = np.trapz(np.trapz(log_like_draco_4d[:,:,:,0],x = np.log(N0_dwarfs),axis=0),x = beta,axis=1)
+
+beta_draco_posterior = np.trapz(np.trapz(log_like_draco_4d[:,:,:,0],x = np.log(N0_dwarfs),axis=0),x = alpha,axis=0)
+
+alpha_beta_posterior = np.trapz(log_like_draco_4d[:,:,:,0],x = np.log(N0_dwarfs),axis=0)
+
+N0_alpha_posterior = np.trapz(log_like_draco_4d[:,:,:,0],x = beta,axis=2)
+
+N0_beta_posterior = np.trapz(log_like_draco_4d[:,:,:,0],x = alpha,axis=1)
+
+plt.plot(N0_dwarfs, N0_draco_posterior/N0_draco_posterior.max())
+plt.xlabel('Normalization')
+plt.xscale('log')
+plt.ylabel('scaled probability')
+plt.savefig('dwarf_N0_posterior.png')
+plt.clf()
+
+plt.plot(alpha, alpha_draco_posterior/alpha_draco_posterior.max())
+plt.xlabel('alpha')
+plt.ylabel('scaled probability')
+plt.savefig('dwarf_alpha_posterior.png')
+plt.clf()
+
+plt.plot(beta, beta_draco_posterior/beta_draco_posterior.max())
+plt.xlabel('beta')
+plt.ylabel('scaled probability')
+plt.savefig('dwarf_beta_posterior.png')
+plt.clf()
+
+plt.contour(N0_dwarfs,alpha,-np.log(N0_alpha_posterior.T  / N0_alpha_posterior.max()))
+plt.xscale('log')
+plt.xlabel('normalization')
+plt.ylabel('alpha')
+plt.savefig('dwarf_N0_alpha_posterior.png')
+plt.clf()
+
+plt.contour(N0_dwarfs,beta,-np.log(N0_beta_posterior.T  / N0_beta_posterior.max()))
+plt.xscale('log')
+plt.xlabel('normalization')
+plt.ylabel('beta')
+plt.savefig('dwarf_N0_beta_posterior.png')
+plt.clf()
+
+plt.contour(alpha,beta,-np.log(alpha_beta_posterior.T  / alpha_beta_posterior.max()))
+plt.xlabel('alpha')
+plt.ylabel('beta')
+plt.savefig('dwarf_alpha_beta_posterior.png')
+plt.clf()
+
 
