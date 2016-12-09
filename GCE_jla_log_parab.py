@@ -355,7 +355,14 @@ for name in like_name:
     mu_dwarf = GCE_calcs.calculations.get_mu_log_parab(expo_dwarf*back_flux_dwarf,expo_dwarf,binned_spectra_dwarf)
     log_like_dwarf_5d = GCE_calcs.analysis.poisson_log_like(k_dwarf,mu_dwarf)
     log_like_dwarf_4d = np.sum(log_like_dwarf_5d,axis=4)
-    log_like_dwarf_2d += np.trapz(log_like_draco_4d[:,:,:,0],x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization
+    log_like_dwarf_2d += np.log(np.trapz(np.exp(log_like_draco_4d[:,:,:,0]),x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization)
+
+like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d - log_like_dwarf_2d.max()),x = alpha,axis=0),x=beta,axis=0)
+
+print log_like_dwarf_2d.max()
+print alpha_prior_norm
+print beta_prior_norm
+print like_dwarf
 
 ####################
 ####### C-C-C-COMBO
