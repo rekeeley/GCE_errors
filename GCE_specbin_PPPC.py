@@ -9,21 +9,21 @@ channel = 1 #bbar
 model = 2  #IC data
 
 dataset=20
-trunc=6
+trunc=8
 
-mass_table = np.array([np.loadtxt('spectra/tau/LSP-energies-original.dat')[:,1],
-			np.loadtxt('spectra/bbar/LSP-energies.dat')[:,1]])[channel] #table of masses
+mass_table = np.array([np.loadtxt('spectra/unbinned/tau/tau_mass_table.txt')[:,1],
+			np.loadtxt('spectra/unbinned/bbar/bbar_mass_table.txt')[:,1]])[channel] #table of masses
 
 N1 = len(mass_table)
 
 #file_path = np.array(['spectra/test/tau/muomega-gammayield-','spectra/test/bbar/muomega-gammayield-'])[channel]
 
-file_path = np.array(['spectra/tau/output-gammayield-','spectra/bbar/muomega-gammayield-'])[channel]
+file_path = np.array(['spectra/unbinned/tau/output-gammayield-','spectra/unbinned/bbar/muomega-gammayield-'])[channel]
 
 output_file = np.array([['tau_full','tau_noMG','tau_IC'],['bbar_full','bbar_noMG','bbar_IC']])[channel][model]
 
 #output_path = 'spectra/test/binned/binned_spectra_'
-output_path = 'spectra/test2/binned/binned_spectra_'
+output_path = np.array(['spectra/binned/tau/binned_spectra_','spectra/binned/bbar/binned_spectra_'])[channel]
 
 #N1 = 120#number of points used in the mass axis
 
@@ -60,10 +60,10 @@ emax_GCE = 10**(raw[trunc:dataset,0] + 0.5*logdiff[0])
 def spectra(m):
     #m is the number of the PPPC4DMID file to load and integrate over
     #these different files are for the different spectra for the different masses
-    if m < 10:
-        file_number = '0'+str(m)
-    else:
-        file_number = str(m)
+    #if m < 10:
+    #    file_number = '0'+str(m)
+    #else:
+	file_number = str(m)
 	number_spectra = np.loadtxt(file_path+file_number+'.dat')
 	binned_number_spectra = np.zeros(len(data.T[0]))  #binning aka (integrating over the bins) the flux density
 	for i in range(len(data.T[0])):
@@ -107,7 +107,7 @@ np.savetxt(output_path+output_file+'_'+str(dataset)+'_'+str(trunc)+'.txt', data_
 #################
 
 data_dwarfs = np.loadtxt('release-01-00-02/like_draco.txt')
-print data_dwarfs.shape
+#print data_dwarfs.shape
 emin = np.unique(data_dwarfs[:,0])/1000.
 emax = np.unique(data_dwarfs[:,1])/1000. #delete copies and convert from GeV to MeV
 
@@ -117,22 +117,22 @@ def spectra2(number_spectra,emin,emax):
         if emin[i] > number_spectra[-1,0]:
             imin = len(number_spectra[:,0])-1
             imax = len(number_spectra[:,0])-1
-            print 'the min of the draco energy bin is above the PPPC4DMID result'
+            #print 'the min of the draco energy bin is above the PPPC4DMID result'
         elif emax[i] > number_spectra[-1,0]:
             imin = np.argmin(number_spectra[:,0] < emin[i])
             imax = len(number_spectra[:,0])-1
-            print 'the max of the draco energy bin is above the PPPC4DMID result'
+            #print 'the max of the draco energy bin is above the PPPC4DMID result'
         else:
             imax = np.argmax(number_spectra[:,0] > emax[i])
             imin = np.argmin(number_spectra[:,0] < emin[i])
-        print 'the minima are...'
-        print emin[i]
-        print imin
-        print number_spectra[imin,0]
-        print 'the maxima are...'
-        print emax[i]
-        print imax
-        print number_spectra[imax,0]
+        #print 'the minima are...'
+        #print emin[i]
+        #print imin
+        #print number_spectra[imin,0]
+        #print 'the maxima are...'
+        #print emax[i]
+        #print imax
+        #print number_spectra[imax,0]
         binned_number_spectra[i] = np.trapz(number_spectra[imin:imax,1],x=number_spectra[imin:imax,0])
     return binned_number_spectra
 
@@ -140,10 +140,7 @@ def spectra2(number_spectra,emin,emax):
 data_out_GCE = np.zeros((N1,len(emin_GCE)))
 for i in range(N1):
     m = i+1
-    if m < 10:
-        file_number = '0'+str(m)
-    else:
-        file_number = str(m)
+    file_number = str(m)
     number_spectra = np.loadtxt(file_path+file_number+'.dat')
     data_out_GCE[i,:] = spectra2(number_spectra,emin_GCE,emax_GCE)
 
@@ -151,17 +148,14 @@ for i in range(N1):
 data_out_draco = np.zeros((N1,len(emin)))
 for i in range(N1):
     m = i+1
-    if m < 10:
-        file_number = '0'+str(m)
-    else:
-        file_number = str(m)
+    file_number = str(m)
     number_spectra = np.loadtxt(file_path+file_number+'.dat')
     data_out_draco[i,:] = spectra2(number_spectra,emin,emax)
 
 
-np.savetxt(output_path+output_file +'GCE_test.txt',data_out_GCE )
+np.savetxt(output_path+output_file +'GCE.txt',data_out_GCE )
 
-np.savetxt(output_path+output_file+'_draco.txt',data_out_draco)
+np.savetxt(output_path+output_file+'_dwarf.txt',data_out_draco)
 
 
 

@@ -86,6 +86,33 @@ print evidence_GCE
 ### Dwarfs
 ###################
 
+like_name = np.array(['like_bootes_I',
+                        'like_bootes_II',
+                        'like_bootes_III',
+                        'like_canes_venatici_I',
+                        'like_canes_venatici_II',
+                        'like_canis_major',
+                        'like_carina',
+                        'like_coma_berenices',
+                        'like_draco',
+                        'like_fornax',
+                        'like_hercules',
+                        'like_leo_I',
+                        'like_leo_II',
+                        'like_leo_IV',
+                        'like_leo_V',
+                        'like_pisces_II',
+                        'like_sagittarius',
+                        'like_sculptor',
+                        'like_segue_1',
+                        'like_segue_2',
+                        'like_sextans',
+                        'like_ursa_major_I',
+                        'like_ursa_major_II',
+                        'like_ursa_minor',
+                        'like_willman_1'])
+
+
 
 data_draco = np.loadtxt('dwarf_re_data/like_draco_data.txt')
 
@@ -121,6 +148,31 @@ evidence_draco = np.sum(draco_like_2d)*sigma_mass_prior
 
 print evidence_draco
 
+
+N0_dwarf = np.logspace(-8,-5,100)
+N0_dwarf_normalization = np.trapz(np.ones(len(N0_dwarf)),x = np.log(N0_dwarf))
+log_like_dwarf_2d = np.zeros((n_alpha,n_beta))
+for name in like_name:
+    data_energy_dwarf = np.loadtxt('release-01-00-02/'+name+'.txt')
+    emin_dwarf = np.unique(data_energy_dwarf[:,0])/1000.
+    emax_dwarf = np.unique(data_energy_dwarf[:,1])/1000. #delete copies and convert from MeV to GeV
+    data_dwarf = np.loadtxt('dwarf_re_data/'+name+'_data.txt')
+    k_dwarf = data_dwarf[:,0]
+    back_flux_dwarf = data_dwarf[:,1]
+    expo_dwarf = data_dwarf[:,2]
+    binned_spectra_dwarf = GCE_calcs.calculations.get_spec_log_parab(N0_dwarf,alpha,beta,Eb,emax_dwarf,emin_dwarf)
+    mu_dwarf = GCE_calcs.calculations.get_mu(expo_dwarf*back_flux_dwarf,expo_dwarf,binned_spectra_dwarf)
+    log_like_dwarf_5d = GCE_calcs.analysis.poisson_log_like(k_dwarf,mu_dwarf)
+    log_like_dwarf_4d = np.sum(log_like_dwarf_5d,axis=4)
+    print log_like_draco_4d.max()
+    log_like_dwarf_2d += np.log(np.trapz(np.exp(log_like_draco_4d[:,:,:,0]) - log_like_draco_4d.max(),x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization)
+
+like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d - log_like_dwarf_2d.max()),x = alpha,axis=0),x=beta,axis=0)
+
+print log_like_dwarf_2d.max()
+print alpha_prior_norm
+print beta_prior_norm
+print like_dwarf
 
 
 
