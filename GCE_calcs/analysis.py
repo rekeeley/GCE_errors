@@ -35,6 +35,11 @@ def get_J_prior_MC(J_range):
     J_kde = stats.gaussian_kde(J)
     return J_kde(J_range)
 
+def get_J_prior_dwarf(J,mu,sigma):
+    exponent = np.random.normal(mu,sigma,80000)
+    J_kde = stats.gaussian_kde(10**exponent)
+    return J_kde(J)
+
 def get_J_prior_Bootes(J):
     log_J_mean = 18.8
     log_J_sigma = 0.22

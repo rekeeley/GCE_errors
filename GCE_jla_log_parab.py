@@ -80,11 +80,8 @@ print like_GCE
 ###################
 
 like_name = np.array(['like_bootes_I',
-                        'like_bootes_II',
-                        'like_bootes_III',
                         'like_canes_venatici_I',
                         'like_canes_venatici_II',
-                        'like_canis_major',
                         'like_carina',
                         'like_coma_berenices',
                         'like_draco',
@@ -93,19 +90,18 @@ like_name = np.array(['like_bootes_I',
                         'like_leo_I',
                         'like_leo_II',
                         'like_leo_IV',
-                        'like_leo_V',
-                        'like_pisces_II',
-                        'like_sagittarius',
                         'like_sculptor',
                         'like_segue_1',
-                        'like_segue_2',
                         'like_sextans',
                         'like_ursa_major_I',
                         'like_ursa_major_II',
                         'like_ursa_minor',
                         'like_willman_1'])
 
+
+
 N0_dwarf = np.logspace(-8,-5,100)
+n_N0_dwarf  = len(N0_dwarf)
 N0_dwarf_normalization = np.trapz(np.ones(len(N0_dwarf)),x = np.log(N0_dwarf))
 dwarf_log_factor = 0
 log_like_dwarf_2d = np.zeros((n_alpha,n_beta))
@@ -115,20 +111,23 @@ for name in like_name:
     emax_dwarf = np.unique(data_energy_dwarf[:,1])/1000. #delete copies and convert from MeV to GeV
     data_dwarf = np.loadtxt('dwarf_re_data/'+name+'_data.txt')
     k_dwarf = data_dwarf[:,0]
+    k_dwarf = np.tile(k_dwarf[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0_dwarf,n_alpha,n_beta,n_eb,1))
     back_flux_dwarf = data_dwarf[:,1]
+    back_flux_dwarf = np.tile(back_flux_dwarf[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0_dwarf,n_alpha,n_beta,n_eb,1))
     expo_dwarf = data_dwarf[:,2]
+    expo_dwarf = np.tile(expo_dwarf[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0_dwarf,n_alpha,n_beta,n_eb,1))
     binned_spectra_dwarf = GCE_calcs.calculations.get_spec_log_parab(N0_dwarf,alpha,beta,Eb,emax_dwarf,emin_dwarf)
     mu_dwarf = GCE_calcs.calculations.get_mu_log_parab(expo_dwarf*back_flux_dwarf,expo_dwarf,binned_spectra_dwarf)
     log_like_dwarf_5d = GCE_calcs.analysis.poisson_log_like(k_dwarf,mu_dwarf)
     log_like_dwarf_4d = np.sum(log_like_dwarf_5d,axis=4)
-    print log_like_dwarf_4d.max()
+    #print log_like_dwarf_4d.max()
     dwarf_log_factor += log_like_dwarf_4d.max()
     log_like_dwarf_2d += np.log(np.trapz(np.exp(log_like_dwarf_4d[:,:,:,0]) - log_like_dwarf_4d.max(),x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization)
 
-like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d - log_like_dwarf_2d.max()),x = alpha,axis=0),x=beta,axis=0)
+like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d ),x = alpha,axis=0),x=beta,axis=0)
 
-print dwarf_log_factor
-print like_dwarf
+
+print 'the evidence is '+str(like_dwarf) + ' times e to the ' + str(dwarf_log_factor)
 
 ####################
 ####### C-C-C-COMBO
