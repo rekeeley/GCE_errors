@@ -35,8 +35,8 @@ J = np.logspace(20.,24.,num=n_J)
 
 n_mass = len(mass_table)
 
-n_sigma = 40
-sigma = np.logspace(-27.,-24.,num=n_sigma)
+n_sigma = 100
+sigma = np.logspace(-27.,-22.,num=n_sigma)
 
 sigma_prior_norm = np.trapz(np.ones(n_sigma),x = np.log(sigma))# a flat prior in linear space for mass and logspace for cross section
 
@@ -74,7 +74,6 @@ GCE_like_2d = np.trapz(GCE_like_3d,x=J,axis=1)
 
 evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
 
-print evidence_GCE
 ################
 ### end GCE part
 ################
@@ -147,8 +146,12 @@ dwarf_var_J = np.array([0.22,
 binned_spectra_dwarf = np.loadtxt(file_path+file_name+'_'+str(dataset)+'_'+str(trunc)+'_dwarf.txt')
 
 log_like_dwarf_2d = np.zeros((n_sigma,n_mass))
+dwarf_log_factor = 0.0
 for i in range(len(like_name)):
     name = like_name[i]
+    data_energy_dwarf = np.loadtxt('release-01-00-02/'+name+'.txt')
+    emin_dwarf = np.unique(data_energy_dwarf[:,0])/1000.
+    emax_dwarf = np.unique(data_energy_dwarf[:,1])/1000. #delete copies and convert from MeV to GeV
     data_dwarf = np.loadtxt('dwarf_re_data/'+name+'_data.txt')
     k_dwarf = data_dwarf[:,0]
     k_dwarf = np.tile(k_dwarf[np.newaxis,np.newaxis,np.newaxis,:],(n_sigma,n_J,n_mass,1))
@@ -163,13 +166,37 @@ for i in range(len(like_name)):
     log_like_dwarf_4d = GCE_calcs.analysis.poisson_log_like(k_dwarf,mu_dwarf)
     log_like_dwarf_3d = np.sum(log_like_dwarf_4d,axis=3)
     log_like_dwarf_3d += np.log(J_prior_dwarf)
+    max_index_dwarf = np.unravel_index(log_like_dwarf_3d.argmax(),log_like_dwarf_3d.shape)
+    print 'the index of the max prob is ' + str(max_index_dwarf)
+    plt.plot(0.5*(emin_dwarf + emax_dwarf),back_flux_dwarf*expo_dwarf, label = 'background')
+    plt.errorbar(0.5*(emin_dwarf + emax_dwarf),k_dwarf[0,0,0,:],yerr = np.sqrt(k_dwarf[0,0,0,:]),label = 'observed counts')
+    plt.plot(0.5*(emin_dwarf + emax_dwarf),mu_dwarf[max_index_dwarf[0],max_index_dwarf[1],max_index_dwarf[2],:],label = 'expected number counts')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('Energy [GeV]')
+    plt.ylabel('Number Counts')
+    plt.legend(loc='best')
+    plt.savefig('test_residuals/dwarf_'+str(i)+'.png')
+    plt.clf()
     print log_like_dwarf_3d.max()
+    dwarf_log_factor +=log_like_dwarf_3d.max()
     log_like_dwarf_2d += np.log(np.trapz(np.exp(log_like_dwarf_3d) - log_like_dwarf_3d.max(),x=J_dwarf,axis=1))
 
 like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d - log_like_dwarf_2d.max()),x = np.log(sigma),axis=0),x=mass_table,axis=0)
 
-print log_like_dwarf_2d.max()
-print like_dwarf
+#print 'the dwarf log factor is ' + str(dwarf_log_factor)
+print 'the dwarf evidence is ' +str(like_dwarf) + ' times e to the ' +str(log_like_dwarf_2d.max()) +' times e to the ' +str(dwarf_log_factor)
 
+print 'the GCE evidence is ' + str(evidence_GCE)
 
+print 'the product of the dwarf and GCE evidence is ' + str(like_dwarf*evidence_GCE) + ' times e to the '+str(dwarf_log_factor)
 
+####################
+####### C-C-C-COMBO
+####################
+
+combo_log_like_2d = log_like_dwarf_2d + np.log(GCE_like_2d)
+combo_like = np.trapz(np.trapz(np.exp(log_like_dwarf_2d - log_like_dwarf_2d.max())*GCE_like_2d,x = np.log(sigma),axis=0),x =mass_table,axis=0)
+
+print combo_like
+print 'the combined evidence is ' +str(combo_like) + ' times e to the ' + str(dwarf_log_factor) + ' times e to the ' + str(log_like_dwarf_2d.max())

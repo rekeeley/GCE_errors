@@ -120,14 +120,14 @@ for name in like_name:
     mu_dwarf = GCE_calcs.calculations.get_mu_log_parab(expo_dwarf*back_flux_dwarf,expo_dwarf,binned_spectra_dwarf)
     log_like_dwarf_5d = GCE_calcs.analysis.poisson_log_like(k_dwarf,mu_dwarf)
     log_like_dwarf_4d = np.sum(log_like_dwarf_5d,axis=4)
-    #print log_like_dwarf_4d.max()
+    print log_like_dwarf_4d.max()
     dwarf_log_factor += log_like_dwarf_4d.max()
     log_like_dwarf_2d += np.log(np.trapz(np.exp(log_like_dwarf_4d[:,:,:,0]) - log_like_dwarf_4d.max(),x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization)
 
 like_dwarf =  np.trapz(np.trapz(np.exp(log_like_dwarf_2d ),x = alpha,axis=0),x=beta,axis=0)
 
 
-print 'the evidence is '+str(like_dwarf) + ' times e to the ' + str(dwarf_log_factor)
+print 'the dwarf evidence is '+str(like_dwarf) + ' times e to the ' + str(dwarf_log_factor)
 
 ####################
 ####### C-C-C-COMBO
@@ -148,5 +148,5 @@ combo_log_like_2d = log_like_dwarf_2d + log_like_GCE_2d
 combo_like = np.trapz(np.trapz(np.exp(combo_log_like_2d),x = alpha, axis = 0),x=beta,axis=0)
 
 print dwarf_log_factor + GCE_log_factor
-print combo_like
+print 'the combo evidence is ' +str(combo_like) + ' times e to the ' + str(dwarf_log_factor + GCE_log_factor)
 
