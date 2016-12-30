@@ -51,14 +51,3 @@ def dwarf_delta_log_like(espectra,like_name):
         f = interpolate.interp1d(data[2,istart:iend]/1000.,data[3,istart:iend],kind='cubic',bounds_error=False,fill_value=data[3,istart:iend][-1])
         delta_log_like[:,:,:,i] = f(espectra[:,:,:,i])    
     return delta_log_like
-    
-def dwarf_delta_log_like_log_parab(espectra,like_name):
-    data = np.loadtxt('release-01-00-02/'+like_name+'.txt', unpack=True)
-    delta_log_like = np.zeros(espectra.shape)
-    for i in range(espectra.shape[3]):
-        istart = i*25
-        iend = istart+25
-        # divide by 1000 to convert from MeV to GeV
-        f = interpolate.interp1d(data[2,istart:iend]/1000.,data[3,istart:iend],kind='cubic',bounds_error=False,fill_value=data[3,istart:iend][-1])
-        delta_log_like[:,:,:,:,i] = f(espectra[:,:,:,:,i])    
-    return delta_log_like    

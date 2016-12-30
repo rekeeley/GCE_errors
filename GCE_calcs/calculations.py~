@@ -57,6 +57,12 @@ def get_eflux(num_spec,J,sigma,mass):
     sigma = np.tile(sigma[:,np.newaxis,np.newaxis,np.newaxis],(1,n_J,n_mass,n_spec))
     num_spec = np.tile(num_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
     eflux = J*sigma*num_spec/(8.*np.pi*mass**2)
+    print eflux[0,0,0,:]
+    print eflux[-1,-1,0,:]
+    print eflux[0,0,n_mass/2,:]
+    print eflux[-1,-1,n_mass/2,:]
+    print eflux[0,0,n_mass-1,:]
+    print eflux[-1,-1,n_mass-1,:]
     return eflux
 
 def conc():

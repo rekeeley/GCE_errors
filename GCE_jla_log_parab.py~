@@ -18,7 +18,7 @@ channel = 1 #bbar
 
 #model = 0  #MG aka full
 #model = 1  #noMG
-model = 2  #IC data
+model = 2  IC data
 
 trunc = 8  #how many data points truncated from the front
 dataset=20 #largest data point

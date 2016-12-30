@@ -1,0 +1,6 @@
+import numpy as np
+import scipy.optimize as scop
+import matplotlib.pyplot as plt
+from scipy import integrate
+
+binned_spectra = np.loadtxt(file_path+file_name+'_'+str(dataset)+'_'+str(trunc)+'_GCE.txt')

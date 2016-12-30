@@ -97,7 +97,6 @@ for name in like_name:
     data = np.loadtxt('release-01-00-02/'+name+'.txt',unpack=True)
     emin = data[0]
     emax = data[1]
-    assert len(emin) == 24*25
     eflux = data[2]
     delta_loglike = data[3]
     eavg = 0.5*(emax-emin)

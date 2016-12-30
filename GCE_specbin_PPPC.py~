@@ -159,7 +159,7 @@ for i in range(N1):
     number_spectra = np.loadtxt(file_path+file_number+'.dat')
     data_out_dwarf_energy[i,:] = energy_spectra(number_spectra,emin,emax)
 
-np.savetxt(output_path+output_file+'_'+str(dataset)+'_'+str(trunc)+'dwarf_energy_spectra.txt',data_out_dwarf_energy)
+np.savetxt(outpu_path+output_file+'_'+str(dataset)+'_'+str(trunc)+'dwarf_energy_spectra.txt',data_out_dwarf_energy)
 
 
 
