@@ -5,25 +5,7 @@ from scipy.special import erf
 
 
 
-def density(x,y,scale_radius,  gamma): #NFW density profile
-    solar_radius = 8.25 #x is the los distance / solar radius  as to make the integral dimensionless
-    R = np.sqrt(1.-2.*y*x + x*x)#R / solar radius
-    return pow(R,-gamma)*pow((1 + R*solar_radius/scale_radius)/(1+solar_radius/scale_radius),gamma-3)
 
-def J_factor(scale_radius,local_density,gamma):
-    #integrating density^2 from x=0 to inf; x is line of sight distance/solarradius
-    #theta = np.zeros((7,7))
-    temp = np.zeros((7,7))
-    for i in range(7):
-        for j in range(7):
-            y = np.cos(.5*(1+i+j)*np.pi/180.)
-            integrand = lambda x: density(x,y,scale_radius,gamma)**2
-            ans, err = integrate.quad(integrand, 0,np.inf)
-            temp[i,j] = ans
-    J = temp.mean()
-    kpctocm = 3.08568e21
-    deltaomega = (7.*np.pi/180.)**2
-    return  deltaomega*J*8.25*kpctocm*local_density*local_density
 
 def get_mu(background,exposure,num_spec,J,sigma,mass):
     #should return an array of shape (n_cross,n_J,n_mass,n_spec)
@@ -42,32 +24,23 @@ def get_mu(background,exposure,num_spec,J,sigma,mass):
     num_spec = np.tile(num_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
     return background + exposure*J*sigma*num_spec/(8.*np.pi*mass**2)
 
-def get_eflux(num_spec,J,sigma,mass):
+def get_eflux(e_spec,J,sigma,mass):
     #should return an array of shape (n_cross,n_J,n_mass,n_spec)
     #background, exposure should be vectors of len n_spec: the number of energy bins
-    #num_spec is an array with shape n_mass,n_spec, it is the binned spectra for the various energy bins, for each mass
+    #e_spec is an array with shape n_mass,n_spec, it is the binned spectra for the various energy bins, for each mass
     #J, sigma, mass are all vectors with their corresponding length
     n_sigma = len(sigma)
     n_mass = len(mass)
     n_J = len(J)
-    n_mass2,n_spec = num_spec.shape
+    n_mass2,n_spec = e_spec.shape
     assert n_mass ==n_mass2, 'the mass and spectra arrays are incompatible'
     J = np.tile(J[np.newaxis,:,np.newaxis,np.newaxis],(n_sigma,1,n_mass,n_spec))
     mass = np.tile(mass[np.newaxis,np.newaxis,:,np.newaxis],(n_sigma,n_J,1,n_spec))
     sigma = np.tile(sigma[:,np.newaxis,np.newaxis,np.newaxis],(1,n_J,n_mass,n_spec))
-    num_spec = np.tile(num_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
-    eflux = J*sigma*num_spec/(8.*np.pi*mass**2)
+    e_spec = np.tile(e_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
+    eflux = J*sigma*e_spec/(8.*np.pi*mass**2)
     return eflux
 
-def conc():
-    coeff = np.array([37.5153,-1.5093,1.63e-2,3.66e-4,-2.89237e-5,5.32e-7])
-    h = 0.67
-    Mmw = 1.5e12
-    rvir = 200.
-    conc = 0.
-    for i in range(6):
-        conc += coeff[i]*np.log(h*Mmw)**i
-    return conc
 
 def get_mu_log_parab(bckgrnd,exposure,num_spec):
     #each of the inputs should be arrays of the shape (n_N0, n_alpha, n_beta, n_eb, n_spec)
@@ -80,10 +53,6 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #beta is a vector of len n_beta, the parameter for exponential cutoff,
     #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
     #N0 is a vector of len n_N0, the parameter for the normalization
-    #print N0
-    #print alpha
-    #print beta
-    #print Eb
     n_spec = len(emax)
     n_eb = len(Eb)
     n_beta = len(beta)
@@ -102,19 +71,46 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
 
 
-def get_dn_de_log_parab(N0,alpha,beta,Eb,energy):
-    n_spec = len(energy)
-    n_eb = len(Eb)
-    n_beta = len(beta)
-    n_alpha = len(alpha)
-    n_N0 = len(N0)
-    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_alpha,n_beta,n_eb,n_spec))
-    alpha = np.tile(alpha[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_N0,1,n_beta,n_eb,n_spec))
-    beta = np.tile(beta[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_N0,n_alpha,1,n_eb,n_spec))
-    Eb = np.tile(Eb[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_alpha,n_beta,1,n_spec))
-    energy = np.tile(energy[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
-    return N0*(energy/Eb)**(-alpha - beta*np.log(energy/Eb))
 
+def get_mu_SIDM(background,exposure,num_spec,J,sigma,mass):
+    #should return an array of shape (n_cross,n_J,n_mass,n_spec)
+    #background, exposure should be vectors of len n_spec: the number of energy bins
+    #num_spec is an array with shape n_mass,n_spec, it is the binned spectra for the various energy bins, for each mass
+    #J, sigma, mass are all vectors with their corresponding length
+    n_gamma = 5.e3 # the number density of photons (NOT the length of some gamma vector)
+    l_GC = 3.086e21
+    sigma_t = 6.6524e-25  #the Thompson cross-section in cm^2
+    n_sigma = len(sigma)
+    n_mass = len(mass)
+    n_J = len(J)
+    n_spec = len(background)
+    background = np.tile(background[np.newaxis,np.newaxis,np.newaxis,:],(n_sigma,n_J,n_mass,1))
+    exposure = np.tile(exposure[np.newaxis,np.newaxis,np.newaxis,:],(n_sigma,n_J,n_mass,1))
+    J = np.tile(J[np.newaxis,:,np.newaxis,np.newaxis],(n_sigma,1,n_mass,n_spec))
+    mass = np.tile(mass[np.newaxis,np.newaxis,:,np.newaxis],(n_sigma,n_J,1,n_spec))
+    sigma = np.tile(sigma[:,np.newaxis,np.newaxis,np.newaxis],(1,n_J,n_mass,n_spec))
+    num_spec = np.tile(num_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
+    return background + exposure*J*n_gamma*sigma_t*sigma*l_GC*num_spec/(16.*np.pi*mass**2)
+    
+def get_eflux_SIDM(e_spec,J,sigma,mass):
+    #should return an array of shape (n_cross,n_J,n_mass,n_spec)
+    #background, exposure should be vectors of len n_spec: the number of energy bins
+    #e_spec is an array with shape n_mass,n_spec, it is the binned spectra for the various energy bins, for each mass
+    #J, sigma, mass are all vectors with their corresponding length
+    n_gamma = 5.e1 # the number density of photons (NOT the length of some gamma vector) in 1/cm^3
+    l_dwarf = 3.086e21 # the length scale of the dwarf 1 kpc-ish
+    sigma_t = 6.6524e-25  #the Thompson cross-section in cm^2
+    n_sigma = len(sigma)
+    n_mass = len(mass)
+    n_J = len(J)
+    n_mass2,n_spec = e_spec.shape
+    assert n_mass ==n_mass2, 'the mass and spectra arrays are incompatible'
+    J = np.tile(J[np.newaxis,:,np.newaxis,np.newaxis],(n_sigma,1,n_mass,n_spec))
+    mass = np.tile(mass[np.newaxis,np.newaxis,:,np.newaxis],(n_sigma,n_J,1,n_spec))
+    sigma = np.tile(sigma[:,np.newaxis,np.newaxis,np.newaxis],(1,n_J,n_mass,n_spec))
+    e_spec = np.tile(e_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
+    eflux = J*n_gamma*sigma_t*sigma*l_dwarf*e_spec/(16.*np.pi*mass**2)
+    return eflux    
 
 
 

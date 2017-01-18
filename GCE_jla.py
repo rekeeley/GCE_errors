@@ -9,6 +9,7 @@ import GCE_calcs
 
 #channel = 0  #tau
 channel = 1 #bbar
+#channel = 2 #SIDM
 
 #model = 0  #MG aka full
 #model = 1  #noMG
@@ -79,7 +80,7 @@ plt.yscale('log')
 plt.xlabel('Energy [GeV]')
 plt.ylabel('Number Counts')
 plt.legend(loc='best')
-plt.savefig('plots/WIMP/test_residuals_GCE.png')
+plt.savefig('plots/WIMP/'+file_name+'test_residuals_GCE.png')
 plt.clf()
 
 GCE_like_2d = np.trapz(GCE_like_3d,x=J,axis=1)
@@ -90,7 +91,7 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylabel('Cross Section [cm^3 sec^-1]')
-plt.savefig('plots/WIMP/GCE_contours.png')
+plt.savefig('plots/WIMP/'+file_name+'GCE_contours.png')
 plt.clf()
 
 evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
@@ -185,7 +186,7 @@ for i in range(len(like_name)):
     plt.yscale('log')
     plt.xlabel('Mass [GeV]')
     plt.ylabel('Cross Section [cm^3 sec^-1]')
-    plt.savefig('plots/WIMP/'+name+'_contours.png')
+    plt.savefig('plots/WIMP/'+file_name+'_'+name+'_contours.png')
     plt.clf()
     like_dwarf_2d *= like_ind_2d
 
@@ -195,14 +196,26 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylabel('Cross Section [cm^3 sec^-1]')
-plt.savefig('plots/WIMP/dwarf_contours.png')
+plt.savefig('plots/WIMP/'+file_name+'_dwarf_contours.png')
 plt.clf()
 
 
-evidence_dwarf = np.trapz(np.trapz(like_dwarf_2d ,x = np.log(sigma),axis=0),x=mass_table,axis=0)/ (sigma_prior_norm * mass_prior_norm)
+like_dwarf_1d = np.trapz(like_dwarf_2d, x=mass_table, axis=1)
+like_GCE_1d = np.trapz(GCE_like_2d, x=mass_table, axis=1)
+plt.plot(sigma, like_dwarf_1d/like_dwarf_1d.max(), label='Combined Dwarfs')
+plt.plot(sigma, like_GCE_1d/like_GCE_1d.max(), label='GCE')
+plt.xscale('log')
+plt.xlabel('Cross Section [cm^3 sec^-1]')
+plt.ylabel('Scaled Posterior')
+plt.ylim(0,1.1)
+plt.legend(loc='best')
+plt.savefig('plots/WIMP/'+file_name+'_cross_section_posteriors.png')
+plt.clf()
 
-print 'the dwarf evidence is ' +str(evidence_dwarf)
+evidence_dwarf = np.trapz(np.trapz(like_dwarf_2d, x=np.log(sigma), axis=0), x=mass_table, axis=0)/ (sigma_prior_norm * mass_prior_norm)
+
 print 'the GCE evidence is ' + str(evidence_GCE)
+print 'the dwarf evidence is ' +str(evidence_dwarf)
 print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evidence_GCE) 
 
 ####################
@@ -210,6 +223,16 @@ print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evide
 ####################
 
 combo_like_2d = like_dwarf_2d  * GCE_like_2d
+
+CS = plt.contour(mass_table,sigma,-np.log(combo_like_2d/combo_like_2d.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.yscale('log')
+plt.xlabel('Mass [GeV]')
+plt.ylabel('Cross Section [cm^3 sec^-1]')
+plt.savefig('plots/WIMP/'+file_name+'_combo_contours.png')
+plt.clf()
+
+
 evidence_combo = np.trapz(np.trapz(combo_like_2d ,x = np.log(sigma),axis=0),x =mass_table,axis=0)/ (sigma_prior_norm * mass_prior_norm)
 
 print 'the combined evidence is ' +str(evidence_combo)

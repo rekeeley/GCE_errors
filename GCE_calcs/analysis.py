@@ -59,6 +59,6 @@ def dwarf_delta_log_like_log_parab(espectra,like_name):
         istart = i*25
         iend = istart+25
         # divide by 1000 to convert from MeV to GeV
-        f = interpolate.interp1d(data[2,istart:iend]/1000.,data[3,istart:iend],kind='cubic',bounds_error=False,fill_value=data[3,istart:iend][-1])
+        f = interpolate.interp1d(data[2,istart:iend]/1000.,data[3,istart:iend],kind='linear',bounds_error=False,fill_value='extrapolate')
         delta_log_like[:,:,:,:,i] = f(espectra[:,:,:,:,i])    
     return delta_log_like    
