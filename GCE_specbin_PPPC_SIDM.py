@@ -13,7 +13,7 @@ mass_table = np.loadtxt('spectra/unbinned/SIDM/SIDM_mass_table.txt')[:,1]
 
 N1 = len(mass_table)
 
-file_path = 'spectra/unbinned/SIDM/output-gammayield-'
+file_path = 'spectra/unbinned/SIDM/muomega-gammayield-'
 
 output_file = np.array(['SIDM_full','SIDM_noMG','SIDM_IC'])[model]
 

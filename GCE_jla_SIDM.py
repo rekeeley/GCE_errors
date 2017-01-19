@@ -20,14 +20,11 @@ trunc = 8  #how many data points truncated from the front
 dataset=20 #largest data point
 
 #table of masses
-#mass_table = np.loadtxt('spectra/unbinned/SIDM/SIDM_mass_table.txt')[:,1]                        
-mass_table = np.loadtxt('spectra/unbinned/bbar/bbar_mass_table.txt')[:,1]
+mass_table = np.loadtxt('spectra/unbinned/SIDM/SIDM_mass_table.txt')[:,1]
 
-#file_path = 'spectra/binned/SIDM/binned_spectra_'
-file_path = 'spectra/binned/bbar/binned_spectra_'
+file_path = 'spectra/binned/SIDM/binned_spectra_'
 
-#file_name = np.array(['SIDM_full','SIDM_noMG','SIDM_IC'])[model]
-file_name = 'bbar_IC'
+file_name = np.array(['SIDM_full','SIDM_noMG','SIDM_IC'])[model]
 
 n_J=400
 J = np.logspace(19.,26.,num=n_J)
@@ -46,13 +43,13 @@ raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
                np.loadtxt('data/background/GCE_paper_IC_spectrum.dat')])[model]
                
 bin_center = raw[trunc:dataset,0]#logarthmic bin center
-k = raw[trunc:dataset,5]
+k = raw[trunc:dataset,5] #observed number counts
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
 binned_spectra = np.loadtxt(file_path+file_name+'_'+str(dataset)+'_'+str(trunc)+'_GCE.txt')
 
-mu = GCE_calcs.calculations.get_mu_SIDM(background,exposure, binned_spectra, J, sigma, mass_table)
+mu = GCE_calcs.calculations.get_mu_SIDM(background,exposure, binned_spectra, J, sigma, mass_table) #modelled (expected) number counts.  is a 4-d array
 
 k = np.tile(k,(n_sigma,n_J,n_mass,1))
 
@@ -70,24 +67,13 @@ J_prior = np.tile(J_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass))
 GCE_like_3d = np.exp(log_like_3d)*J_prior
 
 max_index_GCE = np.unravel_index(GCE_like_3d.argmax(),GCE_like_3d.shape)
-plt.plot(10**bin_center,background, label = 'background')
-plt.errorbar(10**bin_center,k[0,0,0,:],yerr = np.sqrt(k[0,0,0,:]),label = 'observed counts')
-plt.plot(10**bin_center,mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:],label = 'expected number counts')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Energy [GeV]')
-plt.ylabel('Number Counts')
-plt.legend(loc='best')
-plt.savefig('plots/SIDM/test_residuals_GCE.png')
-plt.clf()
-
 plt.errorbar(10**bin_center,k[0,0,0,:] - background,yerr = np.sqrt(k[0,0,0,:]),label = 'Observed Residual')
 plt.plot(10**bin_center,mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:] - background,label = 'Expected Residual')
 plt.xscale('log')
 plt.xlabel('Energy [GeV]')
 plt.ylabel('Residual Number Counts')
 plt.legend(loc='best')
-plt.savefig('plots/SIDM/test_residuals_GCE_2.png')
+plt.savefig('plots/SIDM/'+filen_name+'_test_residuals_GCE.png')
 plt.clf()
 
 
@@ -99,7 +85,7 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylabel('Cross Section [cm^3 sec^-1]')
-plt.savefig('plots/SIDM/GCE_contours.png')
+plt.savefig('plots/SIDM/'+filen_name+'_GCE_contours.png')
 plt.clf()
 
 evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
@@ -194,7 +180,7 @@ for i in range(len(like_name)):
     plt.yscale('log')
     plt.xlabel('Mass [GeV]')
     plt.ylabel('Cross Section [cm^3 sec^-1]')
-    plt.savefig('plots/SIDM/'+name+'_contours.png')
+    plt.savefig('plots/SIDM/'+file_name+'_'+name+'_contours.png')
     plt.clf()
     like_dwarf_2d *= like_ind_2d
 
@@ -204,21 +190,44 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylabel('Cross Section [cm^3 sec^-1]')
-plt.savefig('plots/SIDM/dwarf_contours.png')
+plt.savefig('plots/SIDM/'+file_name+'_dwarf_contours.png')
 plt.clf()
 
 
+like_dwarf_1d = np.trapz(like_dwarf_2d, x=mass_table, axis=1)
+like_GCE_1d = np.trapz(GCE_like_2d, x=mass_table, axis=1)
+plt.plot(sigma, like_dwarf_1d/like_dwarf_1d.max(), label='Combined Dwarfs')
+plt.plot(sigma, like_GCE_1d/like_GCE_1d.max(), label='GCE')
+plt.xscale('log')
+plt.xlabel('Cross Section [cm^3 sec^-1]')
+plt.ylabel('Scaled Posterior')
+plt.ylim(0,1.1)
+plt.legend(loc='best')
+plt.savefig('plots/SIDM/'+file_name+'_cross_section_posteriors.png')
+plt.clf()
+
 evidence_dwarf = np.trapz(np.trapz(like_dwarf_2d ,x = np.log(sigma),axis=0),x=mass_table,axis=0)/ (sigma_prior_norm * mass_prior_norm)
 
-print 'the dwarf evidence is ' +str(evidence_dwarf)
+
 print 'the GCE evidence is ' + str(evidence_GCE)
-print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evidence_GCE) 
+print 'the dwarf evidence is ' +str(evidence_dwarf)
+print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evidence_GCE)
 
 ####################
 ####### C-C-C-COMBO
 ####################
 
 combo_like_2d = like_dwarf_2d  * GCE_like_2d
+
+CS = plt.contour(mass_table,sigma,-np.log(combo_like_2d/combo_like_2d.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.yscale('log')
+plt.xlabel('Mass [GeV]')
+plt.ylabel('Cross Section [cm^3 sec^-1]')
+plt.savefig('plots/WIMP/'+file_name+'_combo_contours.png')
+plt.clf()
+
+
 evidence_combo = np.trapz(np.trapz(combo_like_2d ,x = np.log(sigma),axis=0),x =mass_table,axis=0)/ (sigma_prior_norm * mass_prior_norm)
 
 print 'the combined evidence is ' +str(evidence_combo)

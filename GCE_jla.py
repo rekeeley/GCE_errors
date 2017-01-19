@@ -58,9 +58,9 @@ mu = GCE_calcs.calculations.get_mu(background,exposure, binned_spectra, J, sigma
 
 k = np.tile(k,(n_sigma,n_J,n_mass,1))
 
-log_like_4d = GCE_calcs.analysis.poisson_log_like(k,mu) #a 4-d array of the log-likelihood with shape (n_sigma,n_J,n_mass,n_spec)
+log_like_GCE_4d = GCE_calcs.analysis.poisson_log_like(k,mu) #a 4-d array of the log-likelihood with shape (n_sigma,n_J,n_mass,n_spec)
 
-log_like_3d = np.sum(log_like_4d,axis=3) #summing the log-like along the energy bin axis
+log_like_GCE_3d = np.sum(log_like_GCE_4d,axis=3) #summing the log-like along the energy bin axis
 
 J_prior = GCE_calcs.analysis.get_J_prior_MC(J)
 
@@ -69,18 +69,17 @@ assert abs(norm_test - 1) < 0.01 , 'the normalization of the prior on the J-fact
 
 J_prior = np.tile(J_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass))
 
-GCE_like_3d = np.exp(log_like_3d)*J_prior
+GCE_like_3d = np.exp(log_like_GCE_3d)*J_prior
 
 max_index_GCE = np.unravel_index(GCE_like_3d.argmax(),GCE_like_3d.shape)
-plt.plot(10**bin_center,background, label = 'background')
-plt.errorbar(10**bin_center,k[0,0,0,:],yerr = np.sqrt(k[0,0,0,:]),label = 'observed counts')
-plt.plot(10**bin_center,mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:],label = 'expected number counts')
+plt.errorbar(10**bin_center,k[0,0,0,:]-background,yerr = np.sqrt(k[0,0,0,:]),label = 'Observed Residual')
+plt.plot(10**bin_center,mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:]'+filen_name+',label = 'Expected Residual')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Energy [GeV]')
 plt.ylabel('Number Counts')
 plt.legend(loc='best')
-plt.savefig('plots/WIMP/'+file_name+'test_residuals_GCE.png')
+plt.savefig('plots/WIMP/'+file_name+'_test_residuals_GCE.png')
 plt.clf()
 
 GCE_like_2d = np.trapz(GCE_like_3d,x=J,axis=1)
@@ -91,7 +90,7 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylabel('Cross Section [cm^3 sec^-1]')
-plt.savefig('plots/WIMP/'+file_name+'GCE_contours.png')
+plt.savefig('plots/WIMP/'+file_name+'_GCE_contours.png')
 plt.clf()
 
 evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
