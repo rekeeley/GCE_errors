@@ -36,6 +36,21 @@ k = raw[trunc:dataset,5]
 background = raw[trunc:dataset,7]
 exposure = raw[trunc:dataset,6]
 
+bin_center_full = raw[:,0]#logarthmic bin center
+log_bin_width = bin_center[1] - bin_center[0]
+emin_GCE_full = 10**(bin_center_full - log_bin_width)
+emax_GCE_full = 10**(bin_center_full + log_bin_width)
+k_full = raw[:,5]
+background_full = raw[:,7]
+exposure_full = raw[:,6]
+
+plt.plot(10**bin_center_full,(k_full-background_full)/exposure_full,label = 'Residual Number Flux')
+plt.xscale('log')
+plt.legend(loc='best')
+plt.savefig('residual_flux.png')
+plt.clf()
+
+
 Eb = np.array([0.2])
 alpha = np.linspace(-5.5,0,100)
 beta = np.linspace(0.4,1.7,100)
@@ -75,9 +90,30 @@ plt.legend(loc='best')
 plt.savefig('plots/log_parabola/'+file_name+'test_residuals_GCE.png')
 plt.clf()
 
-GCE_like_2d = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]), x=np.log(N0_GCE), axis=0)/N0_prior_norm
+like_GCE_2d_N0_beta = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]),x=alpha,axis=1)
+like_GCE_2d_N0_alpha = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]),x=beta,axis=2)
+
 
 levels = [0,1,3,6,10,15,25,36,49,100]
+
+CS = plt.contour(beta,N0_GCE,-np.log(like_GCE_2d_N0_beta/like_GCE_2d_N0_beta.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xlabel('beta')
+plt.yscale('log')
+plt.ylabel('Normalization')
+plt.savefig('plots/log_parabola/'+file_name+'_GCE_N0_beta_contours.png')
+plt.clf()
+
+CS = plt.contour(alpha,N0_GCE,-np.log(like_GCE_2d_N0_alpha/like_GCE_2d_N0_alpha.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xlabel('alpha')
+plt.ylabel('Normalization')
+plt.yscale('log')
+plt.savefig('plots/log_parabola/'+file_name+'_GCE_N0_alpha_contours.png')
+plt.clf()
+
+GCE_like_2d = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]), x=np.log(N0_GCE), axis=0)/N0_prior_norm
+
 CS = plt.contour(beta,alpha,-np.log(GCE_like_2d/GCE_like_2d.max()),levels)
 plt.clabel(CS, inline=1, fontsize=10)
 plt.xlabel('beta')
@@ -126,7 +162,7 @@ like_name = np.array(['like_bootes_I',
 
 
 
-N0_dwarf = np.logspace(-11,0,150)
+N0_dwarf = np.logspace(-14,-7,150)
 n_N0_dwarf = len(N0_dwarf)
 N0_dwarf_normalization = np.trapz(np.ones(n_N0_dwarf), x=np.log(N0_dwarf))
 like_dwarf_2d = np.ones((n_alpha,n_beta))
@@ -177,8 +213,7 @@ plt.clf()
 
 evidence_dwarf =  np.trapz(np.trapz(like_dwarf_2d ,x = alpha,axis=0),x=beta,axis=0)/alpha_prior_norm/beta_prior_norm
 
-print 'the GCE evidence is ' +str(evidence_GCE)
-print 'the dwarf evidence is '+str(evidence_dwarf)
+
 
 ####################
 ####### C-C-C-COMBO
@@ -196,6 +231,9 @@ plt.clf()
 
 
 evidence_combo = np.trapz(np.trapz(combo_like_2d,x = alpha, axis = 0),x=beta,axis=0)/alpha_prior_norm/beta_prior_norm
+
+print 'the GCE evidence is ' +str(evidence_GCE)
+print 'the dwarf evidence is '+str(evidence_dwarf)
 
 print 'the product of the dwarf evidence and GCE evidence is ' + str(evidence_dwarf*evidence_GCE)
 

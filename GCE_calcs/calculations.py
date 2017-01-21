@@ -1,9 +1,7 @@
 import numpy as np
 import scipy.optimize as scop
 from scipy import integrate
-from scipy.special import erf
-
-
+from scipy.special import erf, gammainc
 
 
 
@@ -42,9 +40,9 @@ def get_eflux(e_spec,J,sigma,mass):
     return eflux
 
 
-def get_mu_log_parab(bckgrnd,exposure,num_spec):
+def get_mu_log_parab(background,exposure,num_spec):
     #each of the inputs should be arrays of the shape (n_N0, n_alpha, n_beta, n_eb, n_spec)
-    return bckgrnd + exposure*num_spec
+    return background + exposure*num_spec
 
 def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #emax is a vector of len n_spec, the maxima energy of each bin
@@ -68,7 +66,8 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #return N0 * Eb*np.exp(- (alpha-1)**2 / (4*beta))*np.pi**0.5 * (erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) ) - erf( ((alpha-1) + 2*beta*np.log(emin/Eb)) / (2*beta**0.5))) / (2*beta**0.5)
     #return N0 * erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
     #return N0 *  ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5)
-    return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
+    #return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
+    return N0 * (erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emin/Eb)))
 
 
 
@@ -111,6 +110,23 @@ def get_eflux_SIDM(e_spec,J,sigma,mass):
     e_spec = np.tile(e_spec[np.newaxis,np.newaxis,:],(n_sigma,n_J,1,1))
     eflux = J*n_gamma*sigma_t*sigma*l_dwarf*e_spec/(16.*np.pi*mass**2)
     return eflux    
+
+
+def get_spec_exp_cutoff(N0,gamma,p,emax,emin):
+    #outputs an array of shape (n_N0,n_g,n_p,n_spec)
+    # the Energy where the cutoff turns on is low and doesn't seem to affect anything so I'm ignoring it
+    n_spec = len(emax)
+    n_g = len(gamma)
+    n_N0 = len(N0)
+    n_p = len(p)
+    E_s = 0.2
+    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis],(1,n_g,n_p,n_spec))
+    gamma = np.tile(gamma[np.newaxis,:,np.newaxis,np.newaxis],(n_N0,1,n_p,n_spec))
+    p = np.tile(p[np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_g,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_g,n_p,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_g,n_p,1))
+    #return N0* E_s**-gamma * p**(1+gamma) * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
+    return N0 * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
 
 
 
