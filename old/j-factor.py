@@ -13,7 +13,7 @@ def density(x,y,scale_radius,  gamma): #NFW density profile
 	R = np.sqrt(1 -2.*y*x + x*x)#R / solar radius
 	return pow(R,-gamma)*pow((1 + R*solar_radius/scale_radius)/(1+solar_radius/scale_radius),gamma-3)
 
-ddef J_factor(scale_radius,local_density,gamma):
+def J_factor(scale_radius,local_density,gamma):
 	#integrating density^2 from x=0 to inf; x is line of sight distance/solarradius
 	#theta = np.zeros((7,7))
 	temp = np.zeros((7,7))

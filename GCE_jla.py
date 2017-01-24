@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.optimize as scop
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from scipy import integrate
 
 import GCE_calcs
@@ -72,8 +73,8 @@ J_prior = np.tile(J_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass))
 GCE_like_3d = np.exp(log_like_GCE_3d)*J_prior
 
 max_index_GCE = np.unravel_index(GCE_like_3d.argmax(),GCE_like_3d.shape)
-plt.errorbar(10**bin_center,k[0,0,0,:]-background,yerr = np.sqrt(k[0,0,0,:]),label = 'Observed Residual')
-plt.plot(10**bin_center,mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:]'+filen_name+',label = 'Expected Residual')
+plt.errorbar(10**bin_center, k[0,0,0,:]-background, yerr=np.sqrt(k[0,0,0,:]), color='c', label='Observed Residual')
+plt.plot(10**bin_center, mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:], 'm', label='Expected Residual')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Energy [GeV]')
@@ -84,12 +85,21 @@ plt.clf()
 
 GCE_like_2d = np.trapz(GCE_like_3d,x=J,axis=1)
 
-levels = [0,1,3,6,10,15,25,36,49,100]
-CS = plt.contour(mass_table,sigma,-np.log(GCE_like_2d) + np.log(GCE_like_2d.max()),levels)
-plt.clabel(CS, inline=1, fontsize=10)
+cmap = cm.cool
+levels = [0,1,3,6,10,15]
+manual_locations = [(41, 3e-26), (40, 1e-25), (39, 3e-25), (37, 1e-24), (34, 3e-24)]
+CS = plt.contour(mass_table,sigma,-np.log(GCE_like_2d) + np.log(GCE_like_2d.max()), levels, cmap=cm.get_cmap(cmap, len(levels) - 1))
+#plt.clabel(CS, inline=0, fontsize=10, fmt='%1.f', manual=manual_locations)
+plt.text(41, 3e-26, r'1$\sigma$', color='k', fontsize=10)
+plt.text(40, 1e-25, r'2$\sigma$', color='k', fontsize=10)
+plt.text(39, 3e-25, r'3$\sigma$', color='k', fontsize=10)
+plt.text(37, 1e-24, r'4$\sigma$', color='k', fontsize=10)
+plt.text(35, 3e-24, r'5$\sigma$', color='k', fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
-plt.ylabel('Cross Section [cm^3 sec^-1]')
+plt.ylim(1e-28,1e-23)
+plt.ylabel(r'Cross Section [cm$^3$ sec$^{-1}$]')
+plt.title(r'GCE $-\Delta$Log-Likelihood Contours')
 plt.savefig('plots/WIMP/'+file_name+'_GCE_contours.png')
 plt.clf()
 
@@ -190,32 +200,31 @@ for i in range(len(like_name)):
     like_dwarf_2d *= like_ind_2d
 
 
-CS = plt.contour(mass_table,sigma,-np.log(like_dwarf_2d/like_dwarf_2d.max()),levels)
+CS = plt.contour(mass_table, sigma, -np.log(like_dwarf_2d/like_dwarf_2d.max()), levels, cmap=cm.get_cmap(cmap, len(levels) - 1))
 plt.clabel(CS, inline=1, fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
-plt.ylabel('Cross Section [cm^3 sec^-1]')
+plt.ylabel(r'Cross Section [cm$^3$ sec$^{-1}$]')
+plt.ylim(1e-28,1e-23)
+plt.title(r'Combined Dwarf $-\Delta$Log-Likelihood Contours')
 plt.savefig('plots/WIMP/'+file_name+'_dwarf_contours.png')
 plt.clf()
 
 
 like_dwarf_1d = np.trapz(like_dwarf_2d, x=mass_table, axis=1)
 like_GCE_1d = np.trapz(GCE_like_2d, x=mass_table, axis=1)
-plt.plot(sigma, like_dwarf_1d/like_dwarf_1d.max(), label='Combined Dwarfs')
-plt.plot(sigma, like_GCE_1d/like_GCE_1d.max(), label='GCE')
+plt.plot(sigma, like_dwarf_1d/like_dwarf_1d.max(), 'c', label='Combined Dwarfs')
+plt.plot(sigma, like_GCE_1d/like_GCE_1d.max(), 'm', label='GCE')
 plt.xscale('log')
-plt.xlabel('Cross Section [cm^3 sec^-1]')
-plt.ylabel('Scaled Posterior')
+plt.xlabel(r'Cross Section [cm$^3$ sec$^{-1}$]')
+plt.ylabel('Scaled Probabilty')
 plt.ylim(0,1.1)
 plt.legend(loc='best')
+plt.title('Cross Section Posteriors')
 plt.savefig('plots/WIMP/'+file_name+'_cross_section_posteriors.png')
 plt.clf()
 
 evidence_dwarf = np.trapz(np.trapz(like_dwarf_2d, x=np.log(sigma), axis=0), x=mass_table, axis=0)/ (sigma_prior_norm * mass_prior_norm)
-
-print 'the GCE evidence is ' + str(evidence_GCE)
-print 'the dwarf evidence is ' +str(evidence_dwarf)
-print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evidence_GCE) 
 
 ####################
 ####### C-C-C-COMBO
@@ -234,4 +243,8 @@ plt.clf()
 
 evidence_combo = np.trapz(np.trapz(combo_like_2d ,x = np.log(sigma),axis=0),x =mass_table,axis=0)/ (sigma_prior_norm * mass_prior_norm)
 
+
+print 'the GCE evidence is ' + str(evidence_GCE)
+print 'the dwarf evidence is ' +str(evidence_dwarf)
+print 'the product of the dwarf and GCE evidence is ' + str(evidence_dwarf*evidence_GCE)
 print 'the combined evidence is ' +str(evidence_combo)
