@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.optimize as scop
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from scipy import integrate
 
 import GCE_calcs
@@ -19,14 +20,16 @@ import GCE_calcs
 #model = 1  #noMG
 model = 2  #IC data
 
-trunc = 8  #how many data points truncated from the front
+trunc = 6  #how many data points truncated from the front
 dataset=20 #largest data point
 
 raw= np.array([np.loadtxt('data/background/GCE_paper_fullmodel_spectrum.dat'),
                np.loadtxt('data/background/GCE_paper_noMG_spectrum.dat'),
                np.loadtxt('data/background/GCE_paper_IC_spectrum.dat')])[model]
 
-file_name = np.array(['log_parab_full','log_parab_noMG','log_parab_IC'])[model]
+#file_name = 'log_parab_'
+
+file_path = np.array(['full','noMG','IC'])[model] +'_'+str(trunc)+'_'+str(dataset)
                
 bin_center = raw[trunc:dataset,0]#logarthmic bin center
 log_bin_width = bin_center[1] - bin_center[0]
@@ -87,21 +90,21 @@ plt.yscale('log')
 plt.xlabel('Energy [GeV]')
 plt.ylabel('Number Counts')
 plt.legend(loc='best')
-plt.savefig('plots/log_parabola/'+file_name+'test_residuals_GCE.png')
+plt.savefig('plots/log_parabola/'+file_path+'/test_residuals_GCE.png')
 plt.clf()
 
 like_GCE_2d_N0_beta = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]),x=alpha,axis=1)
 like_GCE_2d_N0_alpha = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]),x=beta,axis=2)
 
-
-levels = [0,1,3,6,10,15,25,36,49,100]
+cmap = cm.cool
+levels = [0,1,3,6,10,15]
 
 CS = plt.contour(beta,N0_GCE,-np.log(like_GCE_2d_N0_beta/like_GCE_2d_N0_beta.max()),levels)
 plt.clabel(CS, inline=1, fontsize=10)
 plt.xlabel('beta')
 plt.yscale('log')
 plt.ylabel('Normalization')
-plt.savefig('plots/log_parabola/'+file_name+'_GCE_N0_beta_contours.png')
+plt.savefig('plots/log_parabola/'+file_path+'/GCE_N0_beta_contours.png')
 plt.clf()
 
 CS = plt.contour(alpha,N0_GCE,-np.log(like_GCE_2d_N0_alpha/like_GCE_2d_N0_alpha.max()),levels)
@@ -109,16 +112,17 @@ plt.clabel(CS, inline=1, fontsize=10)
 plt.xlabel('alpha')
 plt.ylabel('Normalization')
 plt.yscale('log')
-plt.savefig('plots/log_parabola/'+file_name+'_GCE_N0_alpha_contours.png')
+plt.savefig('plots/log_parabola/'+file_path+'/GCE_N0_alpha_contours.png')
 plt.clf()
 
 GCE_like_2d = np.trapz(np.exp(log_like_GCE_4d[:,:,:,0]), x=np.log(N0_GCE), axis=0)/N0_prior_norm
 
-CS = plt.contour(beta,alpha,-np.log(GCE_like_2d/GCE_like_2d.max()),levels)
-plt.clabel(CS, inline=1, fontsize=10)
-plt.xlabel('beta')
-plt.ylabel('alpha')
-plt.savefig('plots/log_parabola/'+file_name+'_GCE_contours.png')
+CS = plt.contour(beta, alpha, -np.log(GCE_like_2d/GCE_like_2d.max()), levels, cmap=cm.get_cmap(cmap,len(levels)-1))
+#plt.clabel(CS, inline=1, fontsize=10)
+plt.xlabel(r'$\beta$')
+plt.ylabel(r'$\alpha$')
+plt.title(r'GCE -$\Delta$Log-Likelihood Contours')
+plt.savefig('plots/log_parabola/'+file_path+'/GCE_alpha_beta_contours.png')
 plt.clf()
 
 
@@ -129,7 +133,7 @@ plt.plot(N0_GCE,GCE_like_1d/GCE_like_1d.max())
 plt.xlabel('Normalization')
 plt.xscale('log')
 plt.ylabel('Scaled probability')
-plt.savefig('plots/log_parabola/'+file_name+'_GCE_norm_posterior.png')
+plt.savefig('plots/log_parabola/'+file_path+'/GCE_norm_posterior.png')
 plt.clf()
 
 
@@ -184,14 +188,14 @@ for name in like_name:
     plt.xlabel('beta')
     plt.yscale('log')
     plt.ylabel('Normalization')
-    plt.savefig('plots/log_parabola/'+file_name+'_'+name+'_dwarf_N0_beta_contours.png')
+    plt.savefig('plots/log_parabola/'+file_path+'/'+name+'_dwarf_N0_beta_contours.png')
     plt.clf()
     CS = plt.contour(alpha,N0_dwarf,-np.log(like_dwarf_2d_N0_alpha/like_dwarf_2d_N0_alpha.max()),levels)
     plt.clabel(CS, inline=1, fontsize=10)
     plt.xlabel('alpha')
     plt.ylabel('Normalization')
     plt.yscale('log')
-    plt.savefig('plots/log_parabola/'+file_name+'_'+name+'_dwarf_N0_alpha_contours.png')
+    plt.savefig('plots/log_parabola/'+file_path+'/'+name+'_dwarf_N0_alpha_contours.png')
     plt.clf()
     like_dwarf_2d *= np.trapz(like_dwarf_4d[:,:,:,0],x=np.log(N0_dwarf),axis=0)/N0_dwarf_normalization
     dwarf_norm_posterior = np.trapz(np.trapz(like_dwarf_4d[:,:,:,0] , x=alpha, axis=1), x=beta, axis=1 )
@@ -200,14 +204,15 @@ for name in like_name:
     plt.xscale('log')
     plt.ylabel('Scaled Probability')
     plt.ylim(0,1.1)
-    plt.savefig('plots/log_parabola/'+file_name+'_'+name+'_norm_posterior.png')
+    plt.savefig('plots/log_parabola/'+file_path+'/'+name+'_norm_posterior.png')
     plt.clf()
 
-CS = plt.contour(beta,alpha,-np.log(like_dwarf_2d/like_dwarf_2d.max()),levels)
+CS = plt.contour(beta,alpha,-np.log(like_dwarf_2d/like_dwarf_2d.max()),levels, cmap=cm.get_cmap(cmap,len(levels)-1))
 plt.clabel(CS, inline=1, fontsize=10)
-plt.xlabel('beta')
-plt.ylabel('alpha')
-plt.savefig('plots/log_parabola/'+file_name+'_dwarf_contours.png')
+plt.xlabel(r'$\beta$')
+plt.ylabel(r'$\alpha$')
+plt.title(r'Combined Dwarf $-\Delta$Log-Likelihood Contours')
+plt.savefig('plots/log_parabola/'+file_path+'/dwarf_alpha_beta_contours.png')
 plt.clf()
 
 
@@ -226,7 +231,7 @@ CS = plt.contour(beta,alpha,-np.log(combo_like_2d/combo_like_2d.max()),levels)
 plt.clabel(CS, inline=1, fontsize=10)
 plt.xlabel('beta')
 plt.ylabel('alpha')
-plt.savefig('plots/log_parabola/'+file_name+'_combo_contours.png')
+plt.savefig('plots/log_parabola/'+file_path+'/combo_alpha_beta_contours.png')
 plt.clf()
 
 
