@@ -1,15 +1,10 @@
 readme
 
-The first step is to take spectra from PPPC4DMID and integrate them over the bins of the data (GCE_specbin_PPPC.py)
+The GCE_specbin_PPPC.py files takes output files generated from PPPC4DMID and bins them over the energy bins defined by the data.  The model and used energy bins can be specified in this file.  
 
-The spectra were generated with PPPC4DMID and are located in in spectra/test/(bbar or tau)
+GCE_jla_X.py takes these integrated spectra and outputs various statistics and plots.  X refers to the specific model.
 
-Since there are (2 channels x [3 data models + 2 different data cuts] = 10) 10 cases there are 10 output binned spectra files 
+The spectra for the astrophysical models and the likelihood and prior functions are defined in the GCE_calcs folder in the calculations.py and analysis.py files respectively.
 
-GCE_analysis.py takes these integrated spectra and outputs contour data files in the output folder.
-
-The various plot_X.py make the various plots, and puts them in the write-up folder
-
-j-factor.py outputs monte carlo samples of the prior likelihood and bins them linearly or logarithmically and puts those data files in output/j-factors
-
+J_factor_plot.py outputs monte carlo KDE samples of the prior likelihood for different information about the local dark matter density and plots them.  It also makes a plot of the MW dark matter halo with a standard and contracted scale radii. 
 
