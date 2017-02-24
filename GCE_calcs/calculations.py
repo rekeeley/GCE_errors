@@ -9,13 +9,13 @@ def density(theta,z,scale_radius,  gamma): #NFW density profile
     #theta is a vector with length n_theta in radians, theta is the polar angle where the z-axis is throught the center of the galaxy, not galactic longitude or latitude
     #z is a vector with length n_z
     #scale_radius and gamma are scalars
-	solar_radius = 8.25
+    solar_radius = 8.25
     n_theta = len(theta)
     n_z = len(z)
     theta = np.tile(theta[:,np.newaxis],(1,n_z))
     z = np.tile(z[np.newaxis,:],(n_theta,1))
-	R = np.sqrt(1 -2.*np.cos(theta)*z + z*z)#R / solar radius
-	return pow(R,-gamma)*pow((1 + R*solar_radius/scale_radius)/(1+solar_radius/scale_radius),gamma-3)
+    R = np.sqrt(1 -2.*np.cos(theta)*z + z*z)#R / solar radius
+    return pow(R,-gamma)*pow((1 + R*solar_radius/scale_radius)/(1+solar_radius/scale_radius),gamma-3)
 
 def J_integral(scale_radius,gamma):
     theta = np.linspace(0,7*np.pi/180.,200)
