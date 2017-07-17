@@ -1,16 +1,19 @@
 import numpy as np
 import scipy.optimize as scop
 import matplotlib.pyplot as plt
+from matplotlib import rc
 from scipy import integrate
 
 import GCE_calcs
 
+rc('font',**{'family':'serif','serif':['Times New Roman']})
+plt.rcParams.update({'font.size': 24})
+
 n_J=400
-J = np.logspace(19.,26.,num=n_J)
+J = np.logspace(19.,np.log10(3.e23),num=n_J)
 
 
 J_prior = GCE_calcs.analysis.get_J_prior_MC(J)
-
 
 J_prior_2 = GCE_calcs.analysis.get_J_prior_MC_2(J)
 
@@ -28,16 +31,18 @@ conc = np.sum(argument)
 print conc
 print 200/conc
 
-plt.plot(J,J_prior/J_prior.max(),'c',label = 'Zhang et al 2012')
-plt.plot(J,J_prior_2/J_prior_2.max(),'y',label = 'Pato et al 2015')
-plt.plot(J,J_prior_3/J_prior_3.max(),'m',label = 'McKee et al 2015')
+plt.subplots_adjust(left=0.12, bottom=0.14, right=0.97, top=0.96)
+plt.plot(J,J_prior/J_prior.max(),'c',label = 'Zhang et al 2012', linewidth=2.0)
+plt.plot(J,J_prior_2/J_prior_2.max(),'y',label = 'Pato et al 2015', linewidth=2.0)
+plt.plot(J,J_prior_3/J_prior_3.max(),'m',label = 'McKee et al 2015', linewidth=2.0)
 plt.xscale('log')
+plt.xlim(1e20,3e23)
 plt.ylim(0,1.1)
 plt.xlabel(r'J-factor [GeV$^2$ cm$^{-5}$]')
 plt.ylabel('Scaled Probability')
-plt.legend(loc='best')
-plt.title('J-factor Likelihoods')
-plt.savefig('J_factor_likelihoods.png')
+plt.legend(loc='upper left', frameon=False, fontsize=22)
+#plt.title('J-factor Likelihoods')
+plt.savefig('J_factor_likelihoods.pdf')
 plt.clf()
 
 

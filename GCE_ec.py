@@ -1,0 +1,374 @@
+import numpy as np
+import scipy.optimize as scop
+import matplotlib.pyplot as plt
+from matplotlib import rc
+import matplotlib.cm as cm
+from scipy import integrate
+
+import GCE_calcs
+
+############################
+# Log-Parabola Model (normalization for GCE / dwarfs are independent)
+############################
+
+###################
+######  GCE part
+###################
+
+
+##### DIFFERENT MODELS FOR THE BACKGOUND #####
+#model = 0  #weniger
+model = 1 #gll_iem
+#model = 1  #xbulge
+
+raw= [np.loadtxt('data/background/GC_data_0414.txt'),
+            np.loadtxt('data/background/GC_data_0414_gll_iem.txt'),
+            np.loadtxt('data/background/GC_data_xbulge_0414.txt')][model]
+
+#file_name = 'log_parab_'
+
+file_path = ['wen','gll_iem','xbulge'][model]
+
+emin_GCE = raw[:,0]/1000.
+emax_GCE = raw[:,1]/1000.
+bin_center = bin_center = np.sqrt(emin_GCE*emax_GCE)
+
+k = raw[:,4]
+background = raw[:,3]
+exposure = raw[:,2]
+
+
+gamma = np.linspace(-1.3, -0.3, 31, endpoint=True)
+p = np.linspace(1., 3., 31, endpoint=True)
+gfpsm = np.logspace(29.5,32.5,46,endpoint=True)
+
+GC_SM_mu = 2.6e8
+GC_SM_sigma = 0.1*GC_SM_mu
+GC_dist_mu = 8.25*3.086e21
+GC_dist_sigma = 0.05*GC_dist_mu
+
+SM_GC = np.logspace(np.log10(GC_SM_mu /GC_dist_mu**2./4/np.pi)-2.5,np.log10(GC_SM_mu /GC_dist_mu**2./4/np.pi)+1.5,61,endpoint=True)
+
+n_gamma = len(gamma)
+n_p = len(p)
+n_gfpsm = len(gfpsm)
+n_SM = len(SM_GC)
+#n_N0 = len(N0_GCE)
+
+gamma_prior_norm = np.trapz(np.ones(n_gamma), x = gamma)
+p_prior_norm = np.trapz(np.ones(n_p), x=np.log(p))
+gfpsm_prior_norm = np.trapz(np.ones(n_gfpsm), x=np.log(gfpsm))
+#N0_prior_norm = np.trapz(np.ones(n_N0),x = np.log(N0_GCE))
+
+binned_spectra = GCE_calcs.calculations.get_spec_exp_cutoff_no_special_func(gfpsm,SM_GC,gamma,p,emax_GCE,emin_GCE)
+# 5-d array of shape n_gfpsm, n_SM, n_gamma, n_p, n_spec.  This is the number flux
+
+background = np.tile(background[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_gamma,n_p,1))
+exposure = np.tile(exposure[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_gamma,n_p,1))
+k = np.tile(k[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_gamma,n_p,1))
+
+mu_GCE = GCE_calcs.calculations.get_mu_log_parab(background,exposure,binned_spectra)
+
+log_like_GCE_5d = GCE_calcs.analysis.poisson_log_like(k,mu_GCE)
+
+log_like_GCE_4d = np.sum(log_like_GCE_5d,axis=4)
+
+GC_SM_prior = GCE_calcs.analysis.get_msp_prior(SM_GC, GC_SM_mu, GC_SM_sigma, GC_dist_mu, GC_dist_sigma)
+
+
+rc('font',**{'family':'serif','serif':['Times New Roman']})
+plt.rcParams.update({'font.size': 24})
+
+plt.plot(SM_GC,GC_SM_prior/GC_SM_prior.max() )
+plt.xscale('log')
+plt.ylim(0,1.1)
+plt.xlim(SM_GC[0],SM_GC[-1])
+plt.xlabel('Norm')
+plt.ylabel('Scaled Probability')
+plt.savefig('plots/exp_cutoff/'+file_path+'/norm.png')
+plt.clf()
+
+norm_test = np.trapz(GC_SM_prior, x=SM_GC)
+assert abs(norm_test - 1) < 0.01 , 'the normalization of the prior on the SM is off by more than 1%'
+
+GC_SM_prior = np.tile(GC_SM_prior[np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,1,n_gamma,n_p))
+
+like_GCE_4d = np.exp(log_like_GCE_4d)*GC_SM_prior
+
+like_GCE_3d = np.trapz(like_GCE_4d, x=SM_GC, axis=1)
+
+max_index_GCE = np.unravel_index(like_GCE_4d.argmax(),like_GCE_4d.shape)
+print like_GCE_4d.max()
+print max_index_GCE
+
+
+plt.subplots_adjust(left=0.12, bottom=0.14, right=0.97, top=0.96)
+plt.errorbar(bin_center,k[0,0,0,0,:]-background[0,0,0,0,:],yerr = np.sqrt(k[0,0,0,0,:]), color='c', label='Observed Residual', linewidth=2.0)
+plt.plot(bin_center,mu_GCE[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],max_index_GCE[3],:]-background[0,0,0,0,:], color='m', label='Expected Residual', linewidth=2.0)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(0.2,1e2)
+plt.ylim(1e1,1e5)
+plt.xlabel('Energy [GeV]')
+plt.ylabel('Number counts')
+plt.legend(loc='upper right',frameon=False,fontsize=22)
+plt.savefig('plots/exp_cutoff/'+file_path+'/residuals_GCE.pdf')
+plt.clf()
+
+np.savetxt('plots/exp_cutoff/'+file_path+'/residuals_GCE.txt', (bin_center, k[0,0,0,0,:], background[0,0,0,0,:], mu_GCE[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],max_index_GCE[3],:]))
+
+
+like_GCE_2d_gfpsm_p = np.trapz(like_GCE_3d, x=gamma, axis=1)
+like_GCE_2d_gfpsm_gamma = np.trapz(like_GCE_3d, x=np.log(p), axis=2)
+
+
+levels = [0,1,3,6,10,15]
+cmap = cm.cool
+
+CS = plt.contour(p,gfpsm,-np.log(like_GCE_2d_gfpsm_p/like_GCE_2d_gfpsm_p.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xlabel(r'$E_p$')
+#plt.xscale('log')
+plt.yscale('log')
+plt.ylabel('Gamma-ray Luminosity per Stellar Mass')
+plt.savefig('plots/exp_cutoff/'+file_path+'/GCE_gfpsm_p_contours.png')
+plt.clf()
+
+CS = plt.contour(gamma,gfpsm,-np.log(like_GCE_2d_gfpsm_gamma/like_GCE_2d_gfpsm_gamma.max()),levels)
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xlabel(r'$\gamma$')
+plt.ylabel('Gamma-ray Luminosity per Stellar Mass')
+plt.yscale('log')
+plt.savefig('plots/exp_cutoff/'+file_path+'/GCE_gfpsm_gamma_contours.png')
+plt.clf()
+
+GCE_like_2d = np.trapz(like_GCE_3d, x=np.log(gfpsm), axis=0)
+
+CS = plt.contour(p, gamma, -np.log(GCE_like_2d/GCE_like_2d.max()), levels, cmap=cm.get_cmap(cmap,len(levels)-1))
+plt.clabel(CS, inline=1, fontsize=10)
+#plt.xscale('log')
+plt.xlabel(r'$E_p$')
+plt.ylabel(r'$\gamma$')
+plt.title(r'GCE $-\Delta$Log-Likelihood Contours')
+plt.savefig('plots/exp_cutoff/'+file_path+'/GCE_gamma_p_contours.png')
+plt.clf()
+
+
+
+GCE_like_1d = np.trapz(np.trapz(like_GCE_3d, x=gamma, axis=1), x=np.log(p), axis=1)
+
+plt.plot(gfpsm,GCE_like_1d/GCE_like_1d.max())
+plt.xlabel('Gamma-ray Flux per Stellar Mass')
+plt.xscale('log')
+plt.ylabel('Scaled probability')
+plt.savefig('plots/exp_cutoff/'+file_path+'/GCE_norm_posterior.png')
+plt.clf()
+
+
+evidence_GCE = np.trapz(np.trapz(np.trapz(like_GCE_3d, x=np.log(gfpsm), axis=0), x=gamma, axis=0), x=np.log(p), axis=0)/gamma_prior_norm/p_prior_norm/gfpsm_prior_norm
+
+
+
+###################
+###### dwarfs part
+###################
+
+like_name = np.array(['like_bootes_I',
+                        'like_canes_venatici_I',
+                        'like_canes_venatici_II',
+                        'like_carina',
+                        'like_coma_berenices',
+                        'like_draco',
+                        'like_fornax',
+                        'like_hercules',
+                        'like_leo_I',
+                        'like_leo_II',
+                        'like_leo_IV',
+                        'like_sculptor',
+                        'like_segue_1',
+                        'like_sextans',
+                        'like_ursa_major_I',
+                        'like_ursa_major_II',
+                        'like_ursa_minor',
+                        'like_willman_1'])
+
+#arxiv.org/pdf/1204.1562.pdf
+
+dwarf_SM_mu = 1.e6*np.array([ 0.029,
+                            0.23,
+                            0.0079,
+                            0.38,
+                            0.0037,
+                            0.29,
+                            20.,
+                            0.037,
+                            5.5,
+                            0.74,
+                            0.019,
+                            2.3,
+                            0.00034,
+                            0.44,
+                            0.014,
+                            0.0041,
+                            0.29,
+                            0.0010])
+
+dwarf_dist_mu = 3.086e21*np.array([ 66.,
+                            218.,
+                            160.,
+                            105.,
+                            44.,
+                            76.,
+                            147.,
+                            132.,
+                            254.,
+                            233.,
+                            154.,
+                            86.,
+                            23.,
+                            86.,
+                            97.,
+                            32.,
+                            76.,
+                            38.])
+
+dwarf_dist_sigma = 3.086e21*np.array([2.,
+                            10.,
+                            4.,
+                            6.,
+                            4.,
+                            6.,
+                            12.,
+                            12.,
+                            15.,
+                            14.,
+                            6.,
+                            6.,
+                            2.,
+                            4.,
+                            4.,
+                            4.,
+                            3.,
+                            7.])
+
+
+
+
+
+#N0_dwarf = np.logspace(-14,-7,150)
+#n_N0_dwarf = len(N0_dwarf)
+#N0_dwarf_normalization = np.trapz(np.ones(n_N0_dwarf), x=np.log(N0_dwarf))
+like_dwarf_3d = np.ones((n_gfpsm,n_gamma,n_p))
+for i in range(len(like_name)):
+    name = like_name[i]
+    print name
+    norm_dwarf = np.logspace(np.log10(dwarf_SM_mu[i] /dwarf_dist_mu[i]**2./4/np.pi)-2.5,np.log10(dwarf_SM_mu[i] /dwarf_dist_mu[i]**2./4/np.pi)+1.5,61,endpoint=True)
+    n_norm_dwarf = len(norm_dwarf)
+    data_energy_dwarf = np.loadtxt('release-01-00-02/'+name+'.txt')
+    emin_dwarf = np.unique(data_energy_dwarf[:,0])/1000.
+    emax_dwarf = np.unique(data_energy_dwarf[:,1])/1000. #delete copies and convert from MeV to GeV
+    ebin_dwarf = np.sqrt(emin_dwarf*emax_dwarf)
+    ebin_dwarf = np.tile(ebin_dwarf[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_norm_dwarf,n_gamma,n_p,1))
+    nflux_dwarf = GCE_calcs.calculations.get_spec_exp_cutoff_no_special_func(gfpsm,norm_dwarf,gamma,p,emax_dwarf,emin_dwarf)
+    eflux_dwarf = nflux_dwarf*ebin_dwarf#####FIX THISSSS !!!!!!!
+    log_like_dwarf_5d = GCE_calcs.analysis.dwarf_delta_log_like_log_parab(eflux_dwarf,name)
+    log_like_dwarf_4d = np.sum(log_like_dwarf_5d, axis=4)
+    norm_dwarf_prior = GCE_calcs.analysis.get_msp_prior(norm_dwarf, dwarf_SM_mu[i], 0.1*dwarf_SM_mu[i], dwarf_dist_mu[i], dwarf_dist_sigma[i])
+    plt.plot(norm_dwarf,norm_dwarf_prior/norm_dwarf_prior.max() )
+    plt.xscale('log')
+    plt.ylim(0,1.1)
+    plt.xlim(norm_dwarf[0],norm_dwarf[-1])
+    plt.xlabel('Norm')
+    plt.ylabel('Scaled Probability')
+    plt.savefig('plots/exp_cutoff/'+file_path+'/'+name+'_norm.png')
+    plt.clf()
+    norm_test = np.trapz(norm_dwarf_prior, x=norm_dwarf)
+    assert abs(norm_test - 1) < 0.01 , 'the normalization of the prior on the SM is off by more than 1%'
+    norm_dwarf_prior = np.tile(norm_dwarf_prior[np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,1,n_gamma,n_p))
+    like_dwarf_4d = np.exp(log_like_dwarf_4d)*norm_dwarf_prior
+    like_dwarf_3d_temp = np.trapz(like_dwarf_4d, x=norm_dwarf ,axis=1)
+    like_dwarf_2d_gfpsm_p = np.trapz(like_dwarf_3d, x=gamma, axis=1)
+    like_dwarf_2d_gfpsm_gamma = np.trapz(like_dwarf_3d, x=np.log(p), axis=2)
+    like_dwarf_1d_gfpsm = np.trapz(np.trapz(like_dwarf_3d_temp, x=gamma, axis=1), x=np.log(p), axis=1)
+    CS = plt.contour(p, gfpsm, -np.log(like_dwarf_2d_gfpsm_p/like_dwarf_2d_gfpsm_p.max()), levels)
+    plt.clabel(CS, inline=1, fontsize=10)
+    plt.xlabel(r'$E_p$')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.ylabel('Gamma-ray Luminosity per Stellar Mass')
+    plt.savefig('plots/exp_cutoff/'+file_path+'/'+name+'_gfpsm_p_contours.png')
+    plt.clf()
+    CS = plt.contour(gamma, gfpsm ,-np.log(like_dwarf_2d_gfpsm_gamma/like_dwarf_2d_gfpsm_gamma.max()),levels)
+    plt.clabel(CS, inline=1, fontsize=10)
+    plt.xlabel(r'$\gamma$')
+    plt.ylabel('Gamma-ray Luminosity per Stellar Mass')
+    plt.yscale('log')
+    plt.savefig('plots/exp_cutoff/'+file_path+'/'+name+'_gfpsm_gamma_contours.png')
+    plt.clf()
+    plt.plot(gfpsm, like_dwarf_1d_gfpsm/like_dwarf_1d_gfpsm.max())
+    plt.xlabel('Gamma-ray Luminosity per Sellar Mass')
+    plt.xscale('log')
+    plt.ylabel('Scaled Probability')
+    plt.ylim(0,1.1)
+    plt.savefig('plots/exp_cutoff/'+file_path+'/'+name+'_norm_posterior.png')
+    plt.clf()
+    like_dwarf_3d *= like_dwarf_3d_temp
+
+
+like_dwarf_2d = np.trapz(like_dwarf_3d, x=np.log(gfpsm), axis=0)
+
+CS = plt.contour(p, gamma, -np.log(like_dwarf_2d/like_dwarf_2d.max()), levels, cmap=cm.get_cmap(cmap,len(levels)-1))
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xscale('log')
+plt.xlabel(r'$E_p$')
+plt.ylabel(r'$\gamma$')
+plt.title(r'Combined Dwarf $-\Delta$Log-Likelihood Contours')
+plt.savefig('plots/exp_cutoff/'+file_path+'/dwarf_gamma_p_contours.png')
+plt.clf()
+
+
+like_dwarf_1d_gfpsm = np.trapz(np.trapz(like_dwarf_3d, x=gamma, axis=1), x=np.log(p), axis=1)
+
+plt.subplots_adjust(left=0.12, bottom=0.14, right=0.96, top=0.96)
+plt.plot(gfpsm,like_dwarf_1d_gfpsm/like_dwarf_1d_gfpsm.max(), 'c', label = 'Combined dwarfs', linewidth=2.0)
+plt.plot(gfpsm,GCE_like_1d/GCE_like_1d.max(), 'm', label='GCE', linewidth=2.0)
+plt.xlabel(r'Gamma ray rate per stellar mass [s$^{-1}$ M${_\odot}{^{-1}}$]')
+plt.xscale('log')
+plt.ylabel('Scaled Probability')
+plt.ylim(0,1.1)
+plt.legend(loc = 'upper right', frameon=False, fontsize=22)
+plt.savefig('plots/exp_cutoff/'+file_path+'/gfpsm_posteriors.pdf')
+plt.clf()
+
+evidence_dwarf =  np.trapz(np.trapz(np.trapz(like_dwarf_3d, x=np.log(gfpsm), axis=0), x=gamma, axis=0), x=np.log(p), axis=0)/gamma_prior_norm/p_prior_norm/gfpsm_prior_norm
+
+
+
+####################
+####### C-C-C-COMBO
+####################
+
+combo_like_3d = like_dwarf_3d*like_GCE_3d
+
+combo_like_2d = np.trapz(combo_like_3d, x=np.log(gfpsm), axis=0)
+
+CS = plt.contour(p, gamma, -np.log(combo_like_2d/combo_like_2d.max()), levels, cmap=cm.get_cmap(cmap,len(levels)-1))
+plt.clabel(CS, inline=1, fontsize=10)
+plt.xscale('log')
+plt.xlabel(r'$E_p$')
+plt.ylabel(r'$\gamma$')
+plt.title(r'Combined $-\Delta$Log-Likelihood Contours')
+plt.savefig('plots/exp_cutoff/'+file_path+'/combo_gamma_p_contours.png')
+plt.clf()
+
+
+evidence_combo = np.trapz(np.trapz(np.trapz(combo_like_3d, x=np.log(gfpsm), axis=0), x=gamma, axis=0), x=np.log(p), axis=0)/gamma_prior_norm/p_prior_norm/gfpsm_prior_norm
+
+print 'the GCE evidence is ' +str(evidence_GCE)
+print 'the dwarf evidence is '+str(evidence_dwarf)
+
+print 'the product of the dwarf evidence and GCE evidence is ' + str(evidence_dwarf*evidence_GCE)
+
+print 'the combined evidence is ' +str(evidence_combo)
+
+np.savetxt('plots/exp_cutoff/'+file_path+'/Exp_cutoff_evidences.txt',np.array([evidence_GCE, evidence_dwarf, evidence_dwarf*evidence_GCE, evidence_combo, evidence_dwarf*evidence_GCE/evidence_combo, like_GCE_4d.max()]) )

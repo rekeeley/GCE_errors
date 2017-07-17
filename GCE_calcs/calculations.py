@@ -59,8 +59,9 @@ def get_eflux(e_spec,J,sigma,mass):
 
 
 def get_mu_log_parab(background,exposure,num_spec):
-    #each of the inputs should be arrays of the shape (n_N0, n_alpha, n_beta, n_eb, n_spec)
+    #each of the inputs should be arrays of the shape (n_gfpsm, n_SM, n_alpha, n_beta, n_spec)
     return background + exposure*num_spec
+
 
 def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #emax is a vector of len n_spec, the maxima energy of each bin
@@ -87,6 +88,92 @@ def get_spec_log_parab(N0,alpha,beta,Eb,emax,emin):
     #return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
     return N0 * (erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emin/Eb)))
 
+def get_spec_log_parab_zoa(gfpsm,SM,alpha,beta,Eb,emax,emin):
+    #emax is a vector of len n_spec, the maxima energy of each bin
+    #emin is a vector of len n_spec, the minima energy of each bin
+    #E_b is a scalar, the scale energy of the spectra  shpuld be greater than the max for alpha,beta >0
+    #beta is a vector of len n_beta, the parameter for exponential cutoff,
+    #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
+    #N0 is a vector of len n_N0, the parameter for the normalization
+    n_spec = len(emax)
+    n_beta = len(beta)
+    n_alpha = len(alpha)
+    n_gfpsm = len(gfpsm)
+    n_SM = len(SM)
+    gfpsm = np.tile(gfpsm[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_SM,n_alpha,n_beta,n_spec))
+    SM   =  np.tile(   SM[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_gfpsm,1,n_alpha,n_beta,n_spec))
+    alpha = np.tile(alpha[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,n_SM,1,n_beta,n_spec))
+    beta  = np.tile( beta[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_gfpsm,n_SM,n_alpha,1,n_spec))
+    emax  = np.tile( emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_alpha,n_beta,1))
+    emin  = np.tile( emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_alpha,n_beta,1))
+    #print gfpsm.shape
+    #print SM.shape
+    #print alpha.shape
+    #print beta.shape
+    #print emax.shape
+    #print emin.shape
+    norm = erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(50/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(.200/Eb))
+    #print norm.shape
+    #this norm term is to try and break any degeneracy between the normalization and the spectral parameters.  This seems more important in the zoa case since we are trying to attach physical meaning to this normalization
+    #print erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
+    #return N0 * Eb*np.exp(- (alpha-1)**2 / (4*beta))*np.pi**0.5 * (erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) ) - erf( ((alpha-1) + 2*beta*np.log(emin/Eb)) / (2*beta**0.5))) / (2*beta**0.5)
+    #return N0 * erf( ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5) )
+    #return N0 *  ((alpha-1) + 2*beta*np.log(emax/Eb)) / (2*beta**0.5)
+    #return N0*Eb*0.5*np.sqrt(np.pi/beta) * np.exp(-0.25*(alpha-1)**2/beta) * (erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta) + np.sqrt(beta)*np.log(emin/Eb)))
+    return gfpsm*SM*(erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emax/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(emin/Eb)))/norm
+
+
+def get_spec_log_parab_simple(N0,alpha,beta,Eb,emax,emin):
+    #emax is a vector of len n_spec, the maxima energy of each bin
+    #emin is a vector of len n_spec, the minima energy of each bin
+    #E_b is a vector of len n_eb, the scale energy for the log-parabola
+    #beta is a vector of len n_beta, the parameter for exponential cutoff,
+    #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
+    #N0 is a vector of len n_N0, the parameter for the normalization
+    n_spec = len(emax)
+    n_eb = len(Eb)
+    n_beta = len(beta)
+    n_alpha = len(alpha)
+    n_N0 = len(N0)
+    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_alpha,n_beta,n_eb,n_spec))
+    alpha = np.tile(alpha[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_N0,1,n_beta,n_eb,n_spec))
+    beta = np.tile(beta[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_N0,n_alpha,1,n_eb,n_spec))
+    Eb = np.tile(Eb[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_alpha,n_beta,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_alpha,n_beta,n_eb,1))
+    ebin = np.sqrt(emax*emin)
+    norm = erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(50./Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(.200/Eb))
+    return (emax-emin)*N0* (ebin/Eb)**(-alpha - beta*np.log(ebin/Eb)) / norm
+
+def get_spec_log_parab_simple_zoa(gfpsm,SM,alpha,beta,Eb,emax,emin):
+    #emax is a vector of len n_spec, the maxima energy of each bin
+    #emin is a vector of len n_spec, the minima energy of each bin
+    #E_b is a vector of len n_eb, the scale energy for the log-parabola
+    #beta is a vector of len n_beta, the parameter for exponential cutoff,
+    #alpha is a vector of len n_alpha, the parameter for the power law part of the spectra
+    #N0 is a vector of len n_N0, the parameter for the normalization
+    n_spec = len(emax)
+    n_beta = len(beta)
+    n_alpha = len(alpha)
+    n_gfpsm = len(gfpsm)
+    n_SM = len(SM)
+    gfpsm = np.tile(gfpsm[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_SM,n_alpha,n_beta,n_spec))
+    SM =    np.tile(SM[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_gfpsm,1,n_alpha,n_beta,n_spec))
+    alpha = np.tile(alpha[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,n_SM,1,n_beta,n_spec))
+    beta =  np.tile(beta[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_gfpsm,n_SM,n_alpha,1,n_spec))
+    emax =  np.tile(emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_alpha,n_beta,1))
+    emin =  np.tile(emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_alpha,n_beta,1))
+    ebin =  np.sqrt(emax*emin)
+    #print gfpsm.shape
+    #print SM.shape
+    #print alpha.shape
+    #print beta.shape
+    #print emax.shape
+    #print emin.shape
+    #norm =  np.exp((alpha-1)**2/4/beta)*Eb*np.sqrt(np.pi)/2/np.sqrt(beta) * erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(50/Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(.200/Eb))
+    norm = erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(50./Eb)) - erf(0.5*(alpha-1)/np.sqrt(beta)+np.sqrt(beta)*np.log(.200/Eb))
+    #print norm.shape
+    return (emax-emin)*gfpsm*SM*(ebin/Eb)**(-alpha - beta*np.log(ebin/Eb)) / norm
 
 
 def get_mu_SIDM(background,exposure,num_spec,J,sigma,mass):
@@ -146,5 +233,57 @@ def get_spec_exp_cutoff(N0,gamma,p,emax,emin):
     #return N0* E_s**-gamma * p**(1+gamma) * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
     return N0 * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
 
+def get_spec_exp_cutoff_norm(N0,gamma,p,emax,emin):
+    #outputs an array of shape (n_N0,n_g,n_p,n_spec)
+    # the Energy where the cutoff turns on is low and doesn't seem to affect anything so I'm ignoring it
+    n_spec = len(emax)
+    n_g = len(gamma)
+    n_N0 = len(N0)
+    n_p = len(p)
+    E_s = 0.2
+    N0 = np.tile(N0[:,np.newaxis,np.newaxis,np.newaxis],(1,n_g,n_p,n_spec))
+    gamma = np.tile(gamma[np.newaxis,:,np.newaxis,np.newaxis],(n_N0,1,n_p,n_spec))
+    p = np.tile(p[np.newaxis,np.newaxis,:,np.newaxis],(n_N0,n_g,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_g,n_p,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,:],(n_N0,n_g,n_p,1))
+    norm = (gammainc(1+gamma,50./p) - gammainc(1+gamma,0.2/p))
+    #return N0* E_s**-gamma * p**(1+gamma) * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
+    return N0 * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p)) / norm
+
+def get_spec_exp_cutoff_zoa(gfpsm,SM,gamma,p,emax,emin):
+    #outputs an array of shape (nn_gfpsm,n_SM,n_g,n_p,n_spec)
+    # the Energy where the cutoff turns on is low and doesn't seem to affect anything so I'm ignoring it
+    n_spec = len(emax)
+    n_g = len(gamma)
+    n_gfpsm = len(gfpsm)
+    n_p = len(p)
+    n_SM = len(SM)
+    gfpsm = np.tile(gfpsm[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_SM,n_g,n_p,n_spec))
+    SM = np.tile(SM[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_gfpsm,1,n_g,n_p,n_spec))
+    gamma = np.tile(gamma[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,n_SM,1,n_p,n_spec))
+    p = np.tile(p[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_gfpsm,n_SM,n_g,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_g,n_p,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_g,n_p,1))
+    norm = (gammainc(1.+gamma,50./p) - gammainc(1.+gamma,0.2/p))
+    #return N0* E_s**-gamma * p**(1+gamma) * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p))
+    return gfpsm*SM * (gammainc(1+gamma,emax/p) - gammainc(1+gamma,emin/p)) / norm
+
+def get_spec_exp_cutoff_no_special_func(gfpsm,SM,gamma,p,emax,emin):
+    #outputs an array of shape (nn_gfpsm,n_SM,n_g,n_p,n_spec)
+    # the Energy where the cutoff turns on is low and doesn't seem to affect anything so I'm ignoring it
+    n_spec = len(emax)
+    n_g = len(gamma)
+    n_gfpsm = len(gfpsm)
+    n_p = len(p)
+    n_SM = len(SM)
+    gfpsm = np.tile(gfpsm[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis],(1,n_SM,n_g,n_p,n_spec))
+    SM = np.tile(SM[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis],(n_gfpsm,1,n_g,n_p,n_spec))
+    gamma = np.tile(gamma[np.newaxis,np.newaxis,:,np.newaxis,np.newaxis],(n_gfpsm,n_SM,1,n_p,n_spec))
+    p = np.tile(p[np.newaxis,np.newaxis,np.newaxis,:,np.newaxis],(n_gfpsm,n_SM,n_g,1,n_spec))
+    emax = np.tile(emax[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_g,n_p,1))
+    emin = np.tile(emin[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:],(n_gfpsm,n_SM,n_g,n_p,1))
+    xbin =  np.sqrt(emax*emin)/p
+    dx = (emax-emin)/p
+    return gfpsm*SM*dx*xbin**gamma*np.exp(-xbin)
 
 
