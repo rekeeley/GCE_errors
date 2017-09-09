@@ -13,7 +13,9 @@ def main():
     parser.add_argument('--channel', type=int, default=0,
         help='annihilation channel: bbar=0 tau=1, default bbar')
     parser.add_argument('--model', type=int, default=0,
-        help='background model used to generate the data used for the GCE: weniger=0, gll_iem=1, x-bulge=2')
+        help='background model used to generate the data used for the GCE: horiuchi et al=0, glliem=1, gal2yr=2')
+    parser.add_argument('--trunc', type=int, default=0,
+        help='number of data points to truncate at low energies, default 0')
     args = parser.parse_args()
 
     rc('font',**{'family':'serif','serif':['Times New Roman']})
@@ -21,8 +23,7 @@ def main():
 
     channel = args.channel
     model = args.model
-
-
+    trunc = args.trunc
 
 ###################
 ######  GCE part
@@ -30,32 +31,33 @@ def main():
 
 
     channel_name = ['bbar','tau'][channel]
-    model_name = ['wen','gll_iem','x-bulge'][model]
+    model_name = ['kwa','glliem','gal2yr'][model]# corresponds to case A, B, C, D respectively
     mass_table = np.loadtxt('spectra/unbinned/'+channel_name+'/'+channel_name+'_mass_table.txt')[:,1]
-
-    n_J=41
-    J = np.logspace(19., 23., num=n_J, endpoint=True)
+    
+    n_J=51
+    J = np.logspace(19., 24., num=n_J, endpoint=True)
 
     n_mass = len(mass_table)
-
-    n_sigma = 51
-    sigma = np.logspace(-28., -23., num=n_sigma, endpoint=True) #flat prior in logspace (scale-invariant)
-
-    sigma_prior_norm = np.trapz(np.ones(n_sigma), x=np.log(sigma)) #the inverse of this norm quantities are the prior on sigma
-
     mass_prior_norm = np.trapz(np.ones(n_mass), x=mass_table) #the inverse of this norm quantities are the prior on mass
 
+    n_sigma = 61
+    sigma = np.logspace(-29., -23., num=n_sigma, endpoint=True) #flat prior in logspace (scale-invariant)
+    sigma_prior_norm = np.trapz(np.ones(n_sigma), x=np.log(sigma)) #the inverse of this norm quantities are the prior on sigma
+
+
 ##### DATA #####
-    raw = np.loadtxt('data/background/GC_data_'+model_name+'.txt')
-    
-    emin_GCE = raw[:,0]/1000.
-    emax_GCE = raw[:,1]/1000.
+    raw = np.loadtxt('data/background/GC_'+model_name+'.txt')
+    raw = raw.T
+    emin_GCE = raw[trunc:,0]/1000.
+    emax_GCE = raw[trunc:,1]/1000.
 
     bin_center = np.sqrt(emin_GCE*emax_GCE)
-    k = raw[:,4]
-    background = raw[:,3]
-    exposure = raw[:,2]
-    binned_spectra = np.loadtxt('spectra/binned_0414/'+channel_name+'/binned_spectra_'+channel_name+'_GCE.txt')
+    k = raw[trunc:,4]
+    background = raw[trunc:,3]
+    exposure = raw[trunc:,2]
+    
+##### ANALYSIS #####
+    binned_spectra = np.loadtxt('spectra/binned_0414/'+channel_name+'/binned_spectra_'+channel_name+'_GCE.txt')[:,trunc:]
 
     mu = GCE_calcs.calculations.get_mu(background,exposure, binned_spectra, J, sigma, mass_table)
 
@@ -65,24 +67,22 @@ def main():
 
     log_like_GCE_3d = np.sum(log_like_GCE_4d,axis=3) #summing the log-like along the energy bin axis
 
-    J_prior = np.loadtxt('J_MC.txt')[1] #load the orior on the J-factor, calculated form a convolution of priors on rho_local, gamma, and the scale radius
-
-    plt.plot(J,J_prior/J_prior.max(),'c',label = 'Zhang et al 2012')
-    plt.xscale('log')
-    plt.ylim(0,1.1)
-    plt.xlabel(r'J-factor [GeV$^2$ cm$^{-5}$]')
-    plt.ylabel('Scaled Probability')
-    plt.legend(loc='best')
-    plt.title('J-factor Likelihoods')
-    plt.savefig('plots/WIMP/'+channel_name+'_'+model_name+'/J_factor_likelihoods.pdf')
-    plt.clf()
+    J_prior = np.loadtxt('data/J_factors/J_MC_'+model_name+'.txt')[1] #load the prior on the J-factor, calculated form a convolution of priors on rho_local, gamma, and the scale radius
 
     J_prior = np.tile(J_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass)) #tiling to make the prior the same shape as the likelihood
 
     GCE_like_3d = np.exp(log_like_GCE_3d)*J_prior
 
     max_index_GCE = np.unravel_index(GCE_like_3d.argmax(),GCE_like_3d.shape)
-    print GCE_like_3d.max()
+
+    GCE_like_2d = np.trapz(GCE_like_3d, x=np.log10(J), axis=1) #marginalizing over the J factor
+    
+    evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
+
+########################
+### PLOTS FOR GCE PART
+########################
+
 
     plt.subplots_adjust(left=0.12, bottom=0.14, right=0.97, top=0.96)
     plt.errorbar(bin_center, k[0,0,0,:]-background, yerr=np.sqrt(k[0,0,0,:]), color='c', label='Observed Residual', linewidth=2.0)
@@ -99,7 +99,6 @@ def main():
 
     np.savetxt('plots/WIMP/'+channel_name+'_'+model_name+'/residuals_GCE.txt', (bin_center, k[0,0,0,:], background, mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:]))
 
-    GCE_like_2d = np.trapz(GCE_like_3d, x=J, axis=1) #marginalizing over the J factor
 
     cmap = cm.cool
     levels = [0,1,3,6,10,15]
@@ -112,8 +111,10 @@ def main():
     plt.title(r'GCE $-\Delta$Log-Likelihood Contours')
     plt.savefig('plots/WIMP/'+channel_name+'_'+model_name+'/GCE_contours.pdf')
     plt.clf()
+    
+    np.savetxt('plots/WIMP/'+channel_name+'_'+model_name+'/sigma_mass_posterior.txt', (-np.log(GCE_like_2d) + np.log(GCE_like_2d.max())))
 
-    evidence_GCE = np.trapz(np.trapz(GCE_like_2d,x = np.log(sigma),axis =0),x = mass_table,axis=0) / (sigma_prior_norm * mass_prior_norm)
+
 
 ################
 ### end GCE part
@@ -124,63 +125,69 @@ def main():
 ### Dwarfs
 ###################
 
-    like_name = np.array(['like_bootes_I',
-                        'like_canes_venatici_I',
-                        'like_canes_venatici_II',
-                        'like_carina',
-                        'like_coma_berenices',
-                        'like_draco',
-                        'like_fornax',
-                        'like_hercules',
-                        'like_leo_I',
-                        'like_leo_II',
-                        'like_leo_IV',
-                        'like_sculptor',
-                        'like_segue_1',
-                        'like_sextans',
-                        'like_ursa_major_I',
-                        'like_ursa_major_II',
-                        'like_ursa_minor',
-                        'like_willman_1'])
+    like_name = ['like_bootes_I',
+                'like_canes_venatici_I',
+                'like_canes_venatici_II',
+                'like_carina',
+                'like_coma_berenices',
+                'like_draco',
+                'like_fornax',
+                'like_hercules',
+                'like_leo_I',
+                'like_leo_II',
+                'like_leo_IV',
+                'like_leo_V',
+                'like_reticulum_II',
+                'like_sculptor',
+                'like_segue_1',
+                'like_sextans',
+                'like_ursa_major_I',
+                'like_ursa_major_II',
+                'like_ursa_minor',
+                'like_willman_1']
 
 
-    dwarf_mean_J = np.array([18.8,
-                        17.7,
-                        17.9,
-                        18.1,
-                        19.0,
-                        18.8,
-                        18.2,
-                        18.1,
-                        17.7,
-                        17.6,
-                        17.9,
-                        18.6,
-                        19.5,
-                        18.4,
-                        18.3,
-                        19.3,
-                        18.8,
-                        19.1])
+    dwarf_mean_J = [18.2,
+                    17.4,
+                    17.6,
+                    17.9,
+                    19.0,
+                    18.8,
+                    17.8,
+                    16.9,
+                    17.8,
+                    18.0,
+                    16.3,
+                    16.4,
+                    18.9,
+                    18.5,
+                    19.4,
+                    17.5,
+                    17.9,
+                    19.4,
+                    18.9,
+                    19.1]
 
-    dwarf_var_J = np.array([0.22,
-                        0.26,
-                        0.25,
-                        0.23,
-                        0.25,
-                        0.16,
-                        0.21,
-                        0.25,
-                        0.18,
-                        0.18,
-                        0.28,
-                        0.18,
-                        0.29,
-                        0.27,
-                        0.24,
-                        0.28,
-                        0.19,
-                        0.31])
+    dwarf_var_J = [0.4,
+                    0.3,
+                    0.4,
+                    0.1,
+                    0.4,
+                    0.1,
+                    0.1,
+                    0.7,
+                    0.2,
+                    0.2,
+                    1.4,
+                    0.9,
+                    0.6,
+                    0.1,
+                    0.3,
+                    0.2,
+                    0.5,
+                    0.4,
+                    0.2,
+                    0.3]
 
 
     binned_energy_spectra_dwarf =  np.loadtxt('spectra/binned_0414/'+channel_name+'/binned_spectra_'+channel_name+'_dwarf.txt')# this is a binned energy spectra (as opposed to number spectra)
@@ -189,16 +196,24 @@ def main():
     for i in range(len(like_name)):
         name = like_name[i]
         print name
-        J_dwarf = np.logspace(dwarf_mean_J[i] - 5*dwarf_var_J[i],dwarf_mean_J[i]+5*dwarf_var_J[i],n_J)
+        J_dwarf = np.logspace(dwarf_mean_J[i] - 4*dwarf_var_J[i],dwarf_mean_J[i]+4*dwarf_var_J[i],n_J)
         J_prior_dwarf = GCE_calcs.analysis.get_J_prior_dwarf(J_dwarf,dwarf_mean_J[i],dwarf_var_J[i])
-        norm_test = np.trapz(J_prior_dwarf, x=J_dwarf)
+        plt.plot(J_dwarf,J_prior_dwarf/J_prior_dwarf.max(),'c')
+        plt.xscale('log')
+        plt.ylim(0,1.1)
+        plt.xlabel(r'J-factor [GeV$^2$ cm$^{-5}$]')
+        plt.ylabel('Scaled Probability')
+        plt.title('J-factor Likelihoods')
+        plt.savefig('plots/WIMP/'+channel_name+'_'+model_name+'/'+name+'_J_factor_likelihoods.pdf')
+        plt.clf()
+        norm_test = np.trapz(J_prior_dwarf, x=np.log10(J_dwarf))
         assert abs(norm_test - 1)< 0.01, 'the normalization of the prior on the J-factor is off by more than 1%'
         J_prior_dwarf = np.tile(J_prior_dwarf[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass)) #tiling to make the prior of the J factor the same shape as the likelihood
         espec_dwarf = GCE_calcs.calculations.get_eflux(binned_energy_spectra_dwarf,J_dwarf,sigma,mass_table) #calculating the energy flux spectra
         log_like_dwarf_4d = GCE_calcs.analysis.dwarf_delta_log_like(espec_dwarf,name) #likelihood
         log_like_dwarf_3d = np.sum(log_like_dwarf_4d,axis=3) #summing over energy bins
         like_dwarf_3d = np.exp(log_like_dwarf_3d)*J_prior_dwarf
-        like_ind_2d = np.trapz(like_dwarf_3d, x=J_dwarf, axis=1) #marginalizing over J factor
+        like_ind_2d = np.trapz(like_dwarf_3d, x=np.log10(J_dwarf), axis=1) #marginalizing over J factor
         CS = plt.contour(mass_table,sigma,-np.log(like_ind_2d) + np.log(like_ind_2d.max()),levels)
         plt.clabel(CS, inline=1, fontsize=10)
         plt.yscale('log')
@@ -218,7 +233,8 @@ def main():
     plt.title(r'Combined Dwarf $-\Delta$Log-Likelihood Contours')
     plt.savefig('plots/WIMP/'+channel_name+'_'+model_name+'/dwarf_contours.pdf')
     plt.clf()
-
+    
+    np.savetxt('plots/WIMP/'+channel_name+'_'+model_name+'/dwarf_contours.txt',-np.log(like_dwarf_2d/like_dwarf_2d.max()))
 
     like_dwarf_1d = np.trapz(like_dwarf_2d, x=mass_table, axis=1) #marginalizing over the mass
     like_GCE_1d = np.trapz(GCE_like_2d, x=mass_table, axis=1) #marginalizing over the mass
@@ -250,6 +266,7 @@ def main():
     plt.savefig('plots/WIMP/'+channel_name+'_'+model_name+'/combo_contours.png')
     plt.clf()
 
+    np.savetxt('plots/WIMP/'+channel_name+'_'+model_name+'/cross_section_posteriors.txt',(sigma,like_dwarf_1d/like_dwarf_1d.max(),like_GCE_1d/like_GCE_1d.max()))
 
     evidence_combo = np.trapz(np.trapz(combo_like_2d, x=np.log(sigma), axis=0), x=mass_table, axis=0)/ (sigma_prior_norm * mass_prior_norm)
 

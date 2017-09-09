@@ -3,18 +3,25 @@ import scipy.optimize as scop
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import matplotlib.cm as cm
-from scipy import integrate
+import argparse
 
 import GCE_calcs
+
+# Parse command-line arguments.
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--model', type=int, default=0,
+    help='background model used to generate the data used for the GCE: horiuchi et al=0, glliem=1, gal2yr=2')
+parser.add_argument('--trunc', type=int, default=0,
+    help='number of data points to truncate at low energies, default 0')
+args = parser.parse_args()
+
 
 rc('font',**{'family':'serif','serif':['Times New Roman']})
 plt.rcParams.update({'font.size': 24})
 
 
-#model = 0  #weniger
-model = 1 #gll_iem
-#model = 2 #x-bulge
-
+model = args.model
+trunc = args.trunc
 
 ###################
 ######  GCE part
@@ -22,47 +29,36 @@ model = 1 #gll_iem
 
 
 
-mass_table = np.loadtxt('spectra/binned_0414/SIDM/SIDM_mass_table.txt')
+model_name = ['kwa','glliem','gal2yr','MIT'][model]# corresponds to case A, B, C, D respectively
+mass_table = np.loadtxt('spectra/unbinned/SIDM/SIDM_mass_table.txt')[:,1]
+file_name = model_name
 
-#mass_table = np.linspace(30,70,81,endpoint=True)
-
-#mass_table = np.array([])[channel]
-
-file_path = 'spectra/binned_0414/SIDM/binned_spectra'
-
-file_name = np.array(['wen','gll_iem','xbulge'])[model]
-
-n_J=41
+n_J=51
+norm_range = np.logspace(19.,24.,n_J,endpoint=True)
 
 n_mass = len(mass_table)
+mass_prior_norm = np.trapz(np.ones(n_mass), x=mass_table)
 
-n_sigma = 51
-sigma = np.logspace(-28.,-23.,num=n_sigma,endpoint=True)
-
+n_sigma = 61
+sigma = np.logspace(-29.,-23.,num=n_sigma,endpoint=True)
 sigma_prior_norm = np.trapz(np.ones(n_sigma), x=np.log(sigma))
 # a flat prior in linear space for mass and logspace for cross section
 
-mass_prior_norm = np.trapz(np.ones(n_mass), x=mass_table)
-
-raw= np.array([np.loadtxt('data/background/GC_data_0414.txt'),
-        np.loadtxt('data/background/GC_data_0414_gll_iem.txt'),
-		np.loadtxt('data/background/GC_data_xbulge_0414.txt')])[model]
-
-GC_SM_mu = 2.6e8
-GC_SM_sigma = 0.1*GC_SM_mu
-
-norm_range = np.logspace(19.,23.,n_J,endpoint=True)
 
 ##### DATA #####
-emin_GCE = raw[:,0]/1000.
-emax_GCE = raw[:,1]/1000.
+raw = np.loadtxt('data/background/GC_'+model_name+'.txt')
+raw = raw.T
+emin_GCE = raw[trunc:,0]/1000.
+emax_GCE = raw[trunc:,1]/1000.
 
 bin_center = np.sqrt(emin_GCE*emax_GCE)
-k = raw[:,4]
-background = raw[:,3]
-exposure = raw[:,2]
+k = raw[trunc:,4]
+background = raw[trunc:,3]
+exposure = raw[trunc:,2]
 
-binned_spectra = np.loadtxt(file_path+'_GCE.txt')
+
+##### ANALYSIS #####
+binned_spectra = np.loadtxt('spectra/binned_0414/SIDM/binned_spectra_SIDM_GCE.txt')
 
 mu = GCE_calcs.calculations.get_mu(background,exposure, binned_spectra, norm_range, sigma, mass_table)
 
@@ -72,19 +68,12 @@ log_like_GCE_4d = GCE_calcs.analysis.poisson_log_like(k,mu) #a 4-d array of the 
 
 log_like_GCE_3d = np.sum(log_like_GCE_4d,axis=3) #summing the log-like along the energy bin axis
 
+GC_SM_mu = 2.6e8
+GC_SM_sigma = 0.1*GC_SM_mu
 norm_prior = GCE_calcs.analysis.get_SIDM_prior(norm_range, GC_SM_mu, GC_SM_sigma)
 
 max_norm_index = norm_prior.argmax()
 
-plt.plot(norm_range,norm_prior/norm_prior.max(),'c')
-plt.xscale('log')
-plt.ylim(0,1.1)
-plt.xlabel('Normalization')
-plt.ylabel('Scaled Probability')
-#plt.legend(loc='best')
-plt.title('Normalization Likelihoods')
-plt.savefig('plots/SIDM/'+file_name+'/norm_likelihoods.png')
-plt.clf()
 
 norm_test = np.trapz(norm_prior, x=norm_range)
 assert abs(norm_test - 1) < 0.01 , 'the normalization of the prior on the J-factor is off by more than 1%'
@@ -94,8 +83,25 @@ norm_prior = np.tile(norm_prior[np.newaxis,:,np.newaxis],(n_sigma,1,n_mass))
 GCE_like_3d = np.exp(log_like_GCE_3d)*norm_prior
 
 max_index_GCE = np.unravel_index(GCE_like_3d.argmax(),GCE_like_3d.shape)
-print max_index_GCE
-print GCE_like_3d.max()
+
+GCE_like_2d = np.trapz(GCE_like_3d, x=norm_range, axis=1)
+
+evidence_GCE = np.trapz(np.trapz(GCE_like_2d, x=np.log(sigma), axis=0), x=mass_table, axis=0) / (sigma_prior_norm * mass_prior_norm)
+
+
+########################
+### PLOTS FOR GCE PART
+########################
+
+plt.plot(norm_range,norm_prior[0,:,0]/norm_prior[0,:,0].max(),'c')
+plt.xscale('log')
+plt.ylim(0,1.1)
+plt.xlabel('Normalization')
+plt.ylabel('Scaled Probability')
+plt.title('Normalization Likelihoods')
+plt.savefig('plots/SIDM/'+file_name+'/norm_likelihoods.png')
+plt.clf()
+
 
 plt.subplots_adjust(left=0.12, bottom=0.14, right=0.97, top=0.96)
 plt.errorbar(bin_center, k[0,0,0,:]-background, yerr=np.sqrt(k[0,0,0,:]), color='c', label='Observed Residual', linewidth=2.0)
@@ -112,19 +118,10 @@ plt.clf()
 
 np.savetxt('plots/SIDM/'+file_name+'/residuals_GCE.txt', (bin_center, k[0,0,0,:], background, mu[max_index_GCE[0],max_index_GCE[1],max_index_GCE[2],:]))
 
-
-GCE_like_2d = np.trapz(GCE_like_3d, x=norm_range, axis=1)
-
 cmap = cm.cool
 levels = [0,1,3,6,10,15]
 manual_locations = [(41, 3e-26), (40, 1e-25), (39, 3e-25), (37, 1e-24), (34, 3e-24)]
 CS = plt.contour(mass_table,sigma,-np.log(GCE_like_2d) + np.log(GCE_like_2d.max()), levels, cmap=cm.get_cmap(cmap, len(levels) - 1))
-#plt.clabel(CS, inline=0, fontsize=10, fmt='%1.f', manual=manual_locations)
-#plt.text(41, 3e-26, r'1$\sigma$', color='k', fontsize=10)
-#plt.text(40, 1e-25, r'2$\sigma$', color='k', fontsize=10)
-#plt.text(39, 3e-25, r'3$\sigma$', color='k', fontsize=10)
-#plt.text(37, 1e-24, r'4$\sigma$', color='k', fontsize=10)
-#plt.text(35, 3e-24, r'5$\sigma$', color='k', fontsize=10)
 plt.yscale('log')
 plt.xlabel('Mass [GeV]')
 plt.ylim(sigma[0],sigma[-1])
@@ -133,7 +130,6 @@ plt.title(r'GCE $-\Delta$Log-Likelihood Contours')
 plt.savefig('plots/SIDM/'+file_name+'/GCE_contours.pdf')
 plt.clf()
 
-evidence_GCE = np.trapz(np.trapz(GCE_like_2d, x=np.log(sigma), axis=0), x=mass_table, axis=0) / (sigma_prior_norm * mass_prior_norm)
 
 ################
 ### end GCE part
@@ -227,7 +223,7 @@ dwarf_SM_mu = 1.e6*np.array([ 0.029,
 
 
 
-binned_energy_spectra_dwarf =  np.loadtxt(file_path+'_dwarf.txt')
+binned_energy_spectra_dwarf =  np.loadtxt('spectra/binned_0414/SIDM/binned_spectra_SIDM_dwarf.txt')
 
 like_dwarf_2d = np.ones((n_sigma,n_mass))
 for i in range(len(like_name)):
@@ -243,7 +239,6 @@ for i in range(len(like_name)):
     plt.ylim(0,1.1)
     plt.xlabel('Normalization')
     plt.ylabel('Scaled Probability')
-    #plt.legend(loc='best')
     plt.title('Normalization Likelihoods')
     plt.savefig('plots/SIDM/'+file_name+'/'+name+'_norm_likelihoods.png')
     plt.clf()
@@ -285,7 +280,6 @@ plt.xlabel(r'Normalization')
 plt.ylabel('Scaled Probabilty')
 plt.ylim(0,1.1)
 plt.legend(loc='upper right', frameon=False, fontsize=22)
-#plt.title('Cross Section Posteriors')
 plt.savefig('plots/SIDM/'+file_name+'/cross_section_posteriors.pdf')
 plt.clf()
 
